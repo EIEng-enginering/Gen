@@ -28,10 +28,11 @@ pre{background:#f0f4f6;padding:10px;border-radius:6px;white-space:pre-wrap;overf
 .family-legend span{padding:2px 6px;border-radius:3px;background:#f3f6f8}
 .family-chart-list{font-size:12px;max-height:150px;overflow:auto}
 section[hidden]{display:none!important}button:focus,input:focus,select:focus,textarea:focus{outline:2px solid #be812c;outline-offset:2px}
-</style></head><body><header><div><strong>24 Gen</strong><small>Research workspace · WP-002 provisional evidence</small></div><span>Private local installation — no automatic external searches</span></header>
+</style></head><body><header><div><strong>24 Gen</strong><small>Research workspace · WP-002–016 provisional research</small></div><span>Private local installation — no automatic external searches</span></header>
 <nav aria-label="Research sections">
 <button class="active" data-tab="overview">Overview</button><button data-tab="documents">Historical documents</button>
-<button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button>
+<button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button><button data-tab="evidence">Evidence comparison</button>
+<button data-tab="assistant">Guided research assistant</button><button data-tab="ops">Operations dashboard</button>
 </nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
 <section id="documents" hidden><div class="panel"><h2>WP-010 — Original-source dependence</h2>
@@ -121,6 +122,31 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <label>Budget cap in USD <input name="cost_limit_usd" type="number" min="0" value="0" step="0.01"></label>
 <button class="action primary">Create task</button></form><p class="hint">Tasks are tracked only; this version does not call AI APIs or search external websites automatically.</p></div>
 <div class="panel"><h2>Task queue</h2><div id="jobs-list" class="results"></div></div></div></section>
+
+<section id="evidence" hidden><div class="panel"><h2>WP-014 — Document and transcription comparison</h2>
+<p class="warning">Historical appearances are not confirmed people. Copies of one original are not independent evidence. Local images below are previewed in your browser only; nothing is uploaded.</p>
+<label for="evidence-ids">Two to six observation UUIDs (comma-separated)</label>
+<input id="evidence-ids" placeholder="First observation UUID, second observation UUID" aria-describedby="evidence-help">
+<p id="evidence-help" class="hint">Register historical records first. Original citation and every available transcription revision will be shown separately.</p>
+<button id="evidence-compare" type="button" class="action primary">Compare cited appearances</button>
+<div id="evidence-results" class="grid" aria-live="polite"></div>
+</div><div class="panel"><h3>Local-only image inspection</h3><p class="hint">Images remain in this browser session. No file is sent to Gramps, 24 Gen or an external service.</p>
+<label for="evidence-image">Choose a local image (PNG, JPEG or WebP; maximum 20 MB)</label><input id="evidence-image" type="file" accept="image/png,image/jpeg,image/webp">
+<label for="evidence-zoom">Preview zoom</label><input id="evidence-zoom" type="range" min="25" max="300" value="100" step="25">
+<div id="evidence-image-panel" class="family-diagram" style="max-height:550px" aria-live="polite"></div>
+</div></section>
+<section id="assistant" hidden><div class="panel"><h2>WP-015 — Citation-grounded research guidance</h2>
+<p class="warning">The current assistant is an offline research guide, not a running language model. It does not search provider websites, run cloud AI or alter Gramps records.</p>
+<form id="assistant-form"><label>Research question<textarea name="question" required minlength="4" maxlength="1000" placeholder="Could these appearances be the same person?"></textarea></label>
+<label>Research mode<select name="mode"><option value="guided">Guided steps</option><option value="conventional">Conventional record review</option><option value="autonomous">Autonomous plan only — execution disabled</option></select></label>
+<label>Observation UUIDs (optional, comma-separated; maximum six)<input name="observation_ids" placeholder="Cited record appearances"></label>
+<button class="action primary">Generate source-grounded review plan</button></form>
+<div id="assistant-results" aria-live="polite"></div></div></section>
+<section id="ops" hidden><div class="panel"><h2>WP-016 — Research operations</h2><p class="warning">Local task reservations and reported costs are not evidence of real provider usage. Paid and automated execution remain disabled.</p>
+<button id="ops-refresh" class="action" type="button">Refresh dashboard</button><div id="ops-summary" class="grid" aria-live="polite"></div>
+</div><div class="grid"><div class="panel"><h3>Human review queue</h3><div id="ops-reviews" class="results"></div></div>
+<div class="panel"><h3>Job and budget inspection</h3><label for="ops-job-id">Research job UUID</label><input id="ops-job-id" placeholder="Existing job UUID">
+<button id="ops-inspect" type="button" class="action">Show job detail</button><pre id="ops-detail" aria-live="polite"></pre></div></div></section>
 </main><script>
 'use strict';
 const BASE='/api/v1/research';
@@ -206,7 +232,7 @@ async function loadGraph(groupId){
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'ID: '+x.id,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
-const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs};
+const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs,evidence:async()=>{},assistant:async()=>{},ops:loadOperations};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
 document.querySelector('#dependence-check').onclick=async()=>{
   try{const ids=document.querySelector('#dependence-ids').value.split(',').map(x=>x.trim()).filter(Boolean);
@@ -285,6 +311,78 @@ document.querySelector('#gramps-live-history').onclick=async()=>{
     document.querySelector('#gramps-live-result').textContent=JSON.stringify(result,null,2);
   }catch(e){notify(e.message,true)}
 };
+
+// WP-014: source-cited comparison with local-only image preview.
+document.querySelector('#evidence-compare').onclick=async()=>{try{
+  const ids=document.querySelector('#evidence-ids').value.split(',').map(v=>v.trim()).filter(Boolean);
+  const data=await api('/evidence/compare','POST',{observation_ids:ids});
+  const out=document.querySelector('#evidence-results');out.replaceChildren();
+  out.append(elt('p',data.warning,'warning'));
+  for(const d of data.observations){const box=elt('article',undefined,'panel');
+    box.append(elt('h3',d.record.name_verbatim+' · '+d.record.event_type),
+      elt('p','Event: '+(d.record.event_date_verbatim||'not specified')+' · Place: '+(d.record.place_verbatim||'not specified')),
+      elt('p','Citation: '+d.citation.provider+' / '+d.citation.title+' / '+d.citation.reference),
+      elt('p','Source ID: '+d.citation.document_id+' · Licence: '+d.citation.licence,'hint'));
+    if(d.citation.rights_note)box.append(elt('p','Rights: '+d.citation.rights_note,'hint'));
+    box.append(elt('h3','Original recorded reading'),elt('pre',d.record.initial_transcription));
+    const rev=elt('details');rev.append(elt('summary','Transcription history ('+d.revision_history.length+')'));
+    d.revision_history.forEach(r=>rev.append(elt('p','Editor '+r.editor+' · Reason '+r.reason+' · '+r.created_at),elt('pre',r.text)));
+    box.append(rev);out.append(box);
+  }
+  if(data.literal_differences.length)out.append(elt('p','Literal differences: '+data.literal_differences.map(d=>d.field).join(', '),'warning'));
+  out.append(elt('p','Possible original-source groups: '+data.source_dependence_groups.length+'. Separate groups do not prove independent corroboration.','warning'));
+  notify('Source-cited comparison retrieved. No source image was uploaded.');
+}catch(e){notify(e.message,true)}};
+let evidenceImageUrl=null;
+const imagePanel=document.querySelector('#evidence-image-panel');
+function clearLocalImage(){if(evidenceImageUrl)URL.revokeObjectURL(evidenceImageUrl);evidenceImageUrl=null;imagePanel.replaceChildren();}
+document.querySelector('#evidence-image').onchange=e=>{
+  clearLocalImage();const file=e.target.files?.[0];if(!file)return;
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024){notify('Choose a PNG, JPEG or WebP under 20 MB.',true);e.target.value='';return;}
+  evidenceImageUrl=URL.createObjectURL(file);const pic=elt('img');pic.alt='Local-only document preview';pic.src=evidenceImageUrl;
+  pic.style.maxWidth='none';pic.style.width='100%';pic.style.height='auto';pic.onload=()=>notify('Local image preview loaded without upload.');
+  imagePanel.append(pic);document.querySelector('#evidence-zoom').value='100';
+};
+document.querySelector('#evidence-zoom').oninput=e=>{
+  const pic=imagePanel.querySelector('img');if(pic)pic.style.width=e.target.value+'%';
+};
+window.addEventListener('pagehide',clearLocalImage);
+// WP-015: evidence-based offline guidance. No LLM or provider request.
+document.querySelector('#assistant-form').onsubmit=async e=>{e.preventDefault();try{
+  const b=formFields(e.target);b.observation_ids=(b.observation_ids||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const a=await api('/assistant/answer','POST',b);const root=document.querySelector('#assistant-results');root.replaceChildren();
+  root.append(elt('p',a.warning,'warning'),elt('h3','Cited summary'),elt('p',a.summary),elt('p',a.mode_explanation,'hint'));
+  root.append(elt('h3','Source citations'));
+  a.citations.forEach(c=>root.append(elt('p',c.provider+' · '+c.reference+' · Observation '+c.observation_id)));
+  if(!a.citations.length)root.append(elt('p','No source observations supplied.','hint'));
+  root.append(elt('h3','Next research steps'));
+  const list=elt('ol');a.research_steps.forEach(step=>list.append(elt('li',step)));root.append(list);
+}catch(err){notify(err.message,true)}};
+// WP-016: state displays only, existing protected APIs own permitted controls.
+async function loadOperations(){const [dashboard,reviews]=await Promise.all([api('/ops/dashboard'),api('/ops/reviews')]);
+  const root=document.querySelector('#ops-summary');root.replaceChildren();
+  const totals=elt('div',undefined,'panel');totals.append(elt('h3','Records and work'));
+  Object.entries(dashboard.counts).forEach(([key,val])=>totals.append(elt('p',key.replaceAll('_',' ')+': '+val)));
+  root.append(totals);
+  const jobs=elt('div',undefined,'panel');jobs.append(elt('h3','Job status'));
+  Object.entries(dashboard.job_states).forEach(([state,n])=>jobs.append(elt('p',state+': '+n)));
+  dashboard.recent_jobs.forEach(j=>jobs.append(elt('p',j.objective+' · '+j.mode+' · '+j.status+' · '+j.id)));
+  root.append(jobs);
+  const policy=elt('div',undefined,'panel');policy.append(elt('h3','Provider and permission policies'));
+  dashboard.providers.forEach(p=>policy.append(elt('p',p.provider+': '+p.access_mode+' · calls disabled')));
+  if(!dashboard.providers.length)policy.append(elt('p','No provider policies registered.','hint'));
+  root.append(policy);
+  const review=document.querySelector('#ops-reviews');review.replaceChildren();
+  for(const p of reviews.gramps_change_plans)review.append(elt('p','Gramps research plan '+p.plan_id+' · '+p.status));
+  for(const b of reviews.branch_revisions)review.append(elt('p','Provisional branch '+b.revision_id+' · '+b.status));
+  if(!reviews.gramps_change_plans.length&&!reviews.branch_revisions.length)review.append(elt('p','No pending review entries in the bounded window.'));
+}
+document.querySelector('#ops-refresh').onclick=()=>loadOperations().catch(e=>notify(e.message,true));
+document.querySelector('#ops-inspect').onclick=async()=>{try{
+  const id=document.querySelector('#ops-job-id').value.trim();const data=await api('/ops/jobs/'+encodeURIComponent(id));
+  document.querySelector('#ops-detail').textContent=JSON.stringify(data,null,2);
+}catch(e){notify(e.message,true)}};
+
 loadSummary().catch(e=>notify('Database not ready: '+e.message,true));
 </script></body></html>'''
 
