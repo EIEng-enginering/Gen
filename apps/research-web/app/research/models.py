@@ -223,3 +223,47 @@ class BranchReview(Base):
         CheckConstraint("decision IN ('research_supported','rejected','deferred')", name='ck_branch_review'),
         Index('ix_branch_review_revision', 'revision_id', 'created_at'),
     )
+
+
+class GrampsChangePlan(Base):
+    """Immutable research-to-Gramps preview; never an executable transaction."""
+    __tablename__ = 'gramps_change_plans'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    idempotency_key = Column(String(128), nullable=False, unique=True)
+    hypothesis_set_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_sets.id', ondelete='RESTRICT'), nullable=False)
+    option_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_options.id', ondelete='RESTRICT'), nullable=False)
+    branch_revision_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_branch_revisions.id', ondelete='RESTRICT'), nullable=False)
+    set_version_after_creation = Column(Integer, nullable=False)
+    digest_sha256 = Column(String(64), nullable=False)
+    preview_json = Column(JSON, nullable=False)
+    operator_note = Column(Text, nullable=False)
+    created_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now, nullable=False)
+    __table_args__ = (
+        CheckConstraint('set_version_after_creation >= 1', name='ck_gramps_plan_set_version'),
+        Index('ix_gramps_plan_set', 'hypothesis_set_id', 'created_at'),
+    )
+
+
+class GrampsPlanDecision(Base):
+    """Single human judgement for a specific immutable preview. No accepted-tree write."""
+    __tablename__ = 'gramps_plan_decisions'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    plan_id = Column(Uuid(as_uuid=True), ForeignKey('gramps_change_plans.id', ondelete='RESTRICT'), nullable=False, unique=True)
+    decision = Column(String(45), nullable=False)
+    reviewer = Column(String(120), nullable=False)
+    rationale = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now, nullable=False)
+    __table_args__ = (CheckConstraint("decision IN ('approve_for_future_validation','reject')", name='ck_gramps_plan_decision'),)
+
+
+class GrampsReadValidation(Base):
+    """Append-only WP-007 local audit of upstream GET-only preflight. Never a write permit."""
+    __tablename__ = 'gramps_read_validations'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    plan_id = Column(Uuid(as_uuid=True), ForeignKey('gramps_change_plans.id', ondelete='RESTRICT'), nullable=False)
+    plan_digest = Column(String(64), nullable=False)
+    checked_by = Column(String(120), nullable=False)
+    result_json = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now, nullable=False)
+    __table_args__ = (Index('ix_gramps_read_plan_time', 'plan_id', 'created_at'),)
