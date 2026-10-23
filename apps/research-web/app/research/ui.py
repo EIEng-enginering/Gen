@@ -27,7 +27,12 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button>
 </nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
-<section id="documents" hidden><div class="grid"><div class="panel"><h2>Register a historical document</h2>
+<section id="documents" hidden><div class="panel"><h2>WP-010 — Original-source dependence</h2>
+<p class="warning">Two websites reproducing one original register are not independent corroborating evidence. These checks never merge documents or identities.</p>
+<label>Source document UUIDs (comma-separated, up to 100) <input id="dependence-ids" placeholder="First source UUID, second source UUID"></label>
+<button class="action" id="dependence-check" type="button">Assess possible shared originals</button>
+<pre id="dependence-results" aria-live="polite">No assessment requested.</pre>
+</div><div class="grid"><div class="panel"><h2>Register a historical document</h2>
 <form id="document-form">
 <label>Provider <input name="provider" required value="manual_collection"></label>
 <label>Original record ID <input name="provider_record_id" required placeholder="Unique archive or local reference"></label>
@@ -93,7 +98,18 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <button type="button" class="action" id="gramps-live-read">Validate handles against live Gramps (read-only)</button>
 <button type="button" class="action" id="gramps-live-history">View validation history</button>
 <pre id="gramps-live-result">No live validation performed</pre></div></div></section>
-<section id="jobs" hidden><div class="grid"><div class="panel"><h2>Research task</h2><form id="job-form"><label>Research objective <textarea name="objective" required placeholder="Investigate parents of ..."></textarea></label>
+<section id="jobs" hidden><div class="panel"><h2>WP-011 — Staged research tasks</h2>
+<p class="warning">Only local review tasks are claimable. Manual websites, approved APIs, external searches and paid services are not executed by this application.</p>
+<form id="task-form">
+<label>Job UUID <input name="job_id" required></label>
+<label>Idempotency task key <input name="task_key" required placeholder="review-parish-0001"></label>
+<label>Task type <select name="kind"><option>local_review</option><option>manual_lookup</option><option>approved_api_request</option></select></label>
+<label>Provider/source name <input name="source_provider" required value="local_manual"></label>
+<label>Reserved budget (cents) <input type="number" name="reserved_cost_cents" min="0" value="0"></label>
+<button class="action primary" type="submit">Register research task</button></form>
+<label>Inspect tasks for job UUID <input id="tasks-job-id"></label>
+<button class="action" id="tasks-inspect">Show tasks and cost budget</button><pre id="tasks-result" aria-live="polite"></pre>
+</div><div class="grid"><div class="panel"><h2>Research task</h2><form id="job-form"><label>Research objective <textarea name="objective" required placeholder="Investigate parents of ..."></textarea></label>
 <label>Mode <select name="mode"><option value="guided">AI guided (planning only)</option><option value="conventional">Conventional</option><option value="autonomous">Autonomous (paused until worker added)</option></select></label>
 <label>Budget cap in USD <input name="cost_limit_usd" type="number" min="0" value="0" step="0.01"></label>
 <button class="action primary">Create task</button></form><p class="hint">Tasks are tracked only; this version does not call AI APIs or search external websites automatically.</p></div>
@@ -130,9 +146,27 @@ for(const o of data.options){
 root.append(elt('p','Structural comparison only. Original source groups may not be independent.','hint'));
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
-async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
+async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'ID: '+x.id,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
 const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
+document.querySelector('#dependence-check').onclick=async()=>{
+  try{const ids=document.querySelector('#dependence-ids').value.split(',').map(x=>x.trim()).filter(Boolean);
+    const data=await api('/source-dependence/assess','POST',{document_ids:ids});
+    document.querySelector('#dependence-results').textContent=JSON.stringify(data,null,2);
+  }catch(e){notify(e.message,true)}
+};
+document.querySelector('#task-form').onsubmit=async e=>{e.preventDefault();try{
+  const data=formFields(e.target);const id=data.job_id;delete data.job_id;
+  data.reserved_cost_cents=Number(data.reserved_cost_cents||0);data.input_json={};
+  const result=await api('/jobs/'+encodeURIComponent(id)+'/tasks','POST',data);
+  notify('Research task registered '+result.id+'. No external execution occurred.');await loadJobs();
+}catch(e){notify(e.message,true)}};
+document.querySelector('#tasks-inspect').onclick=async()=>{
+  try{const id=encodeURIComponent(document.querySelector('#tasks-job-id').value.trim());
+    const tasks=await api('/jobs/'+id+'/tasks');const budget=await api('/jobs/'+id+'/budget');
+    document.querySelector('#tasks-result').textContent=JSON.stringify({budget,tasks},null,2);
+  }catch(e){notify(e.message,true)}
+};
 document.querySelector('#doc-search').onclick=()=>loadDocuments().catch(e=>notify(e.message,true));
 document.querySelector('#ob-search').onclick=()=>loadObservations().catch(e=>notify(e.message,true));
 document.querySelector('#document-form').onsubmit=async e=>{e.preventDefault();try{const data=await api('/documents','POST',formFields(e.target));notify('Document '+(data.created?'registered':'already exists')+' | UUID: '+data.id);e.target.reset();await loadDocuments()}catch(err){notify(err.message,true)}};
