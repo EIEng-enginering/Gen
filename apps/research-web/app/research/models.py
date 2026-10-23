@@ -267,3 +267,31 @@ class GrampsReadValidation(Base):
     result_json = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), default=now, nullable=False)
     __table_args__ = (Index('ix_gramps_read_plan_time', 'plan_id', 'created_at'),)
+
+
+class HistoricalPlace(Base):
+    """WP-009 source-cited *historical label*, not a claim of jurisdiction proof.
+
+    Place names/boundaries may vary with time. This table never infers borders from
+    a modern map and never merges homonymous settlements automatically.
+    """
+    __tablename__ = 'historical_places'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    source_document_id = Column(Uuid(as_uuid=True), ForeignKey('source_documents.id', ondelete='RESTRICT'), nullable=False)
+    place_key = Column(String(140), nullable=False)
+    label = Column(String(300), nullable=False)
+    county_label = Column(String(160), nullable=False, default='')
+    jurisdiction_type = Column(String(50), nullable=False, default='undetermined')
+    valid_from_year = Column(Integer)
+    valid_to_year = Column(Integer)
+    aliases_json = Column(JSON, nullable=False, default=list)
+    evidence_note = Column(Text, nullable=False)
+    created_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    __table_args__ = (
+        UniqueConstraint('source_document_id', 'place_key', name='uq_historical_place_source_key'),
+        CheckConstraint('valid_from_year IS NULL OR (valid_from_year >= 1000 AND valid_from_year <= 2100)', name='ck_historical_place_start'),
+        CheckConstraint('valid_to_year IS NULL OR (valid_to_year >= 1000 AND valid_to_year <= 2100)', name='ck_historical_place_end'),
+        CheckConstraint('valid_from_year IS NULL OR valid_to_year IS NULL OR valid_from_year <= valid_to_year', name='ck_historical_place_interval'),
+        Index('ix_historical_place_county', 'county_label', 'label'),
+    )

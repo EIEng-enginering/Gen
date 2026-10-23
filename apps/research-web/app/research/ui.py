@@ -24,7 +24,7 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 </style></head><body><header><div><strong>24 Gen</strong><small>Research workspace · WP-002 provisional evidence</small></div><span>Private local installation — no automatic external searches</span></header>
 <nav aria-label="Research sections">
 <button class="active" data-tab="overview">Overview</button><button data-tab="documents">Historical documents</button>
-<button data-tab="observations">Person appearances</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button>
+<button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button>
 </nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
 <section id="documents" hidden><div class="grid"><div class="panel"><h2>Register a historical document</h2>
@@ -52,6 +52,21 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <button class="action primary" type="submit">Register appearance</button></form></div>
 <div class="panel"><h2>Person appearances</h2><input id="ob-q" placeholder="Name, place or event"><button class="action" id="ob-search">Search</button>
 <div id="observations-list" class="results"></div><h3>Potential identity matches</h3><p class="hint">Scores rank review candidates; they are not calibrated probability percentages.</p><div id="matches-list"></div></div></div></section>
+<section id="historical" hidden><div class="grid"><div class="panel"><h2>Historic parish / place evidence</h2>
+<p class="warning">Locations must be supported by a registered document. These records do not automatically establish jurisdiction boundaries or distances.</p>
+<form id="historical-form">
+<label>Source document UUID <input name="source_document_id" required></label>
+<label>Unique source place key <input name="place_key" required></label>
+<label>Historic place label <input name="label" required></label>
+<label>County name in source <input name="county_label"></label>
+<label>Jurisdiction <select name="jurisdiction_type"><option>undetermined</option><option>parish</option><option>chapelry</option><option>settlement</option><option>county</option><option>registration_district</option></select></label>
+<label>From year (optional) <input name="valid_from_year" type="number" min="1000" max="2100"></label>
+<label>To year (optional) <input name="valid_to_year" type="number" min="1000" max="2100"></label>
+<label>Original evidence explanation <textarea name="evidence_note" required></textarea></label>
+<button class="action primary">Register source-backed place</button></form></div>
+<div class="panel"><h2>Search historic labels</h2><label>Place or county <input id="historical-q" placeholder="Parish, settlement or county"></label>
+<button class="action" id="historical-search" type="button">Search registered places</button><div id="historical-list" class="results"></div>
+<p class="hint">The programme does not have an authoritative complete English parish gazetteer yet. Do not infer actual distances from text matches.</p></div></div></section>
 <section id="hypotheses" hidden><div class="panel"><h2>Competing family hypotheses</h2><p class="warning">The "other or unknown" alternative is mandatory. Unscored hypotheses remain unscored until validated probability calibration is available.</p><div id="hypothesis-list" class="results"></div><div id="graph-comparison" class="panel"><h3>Alternative branch comparison</h3><p class="hint">Select a hypothesis above to inspect versioned proposed relationships, source-group warnings and unknown possibilities. No numerical probabilities or accepted-tree updates are implied.</p></div><p class="hint">Versioned graph editing and research reviews are available through the documented local API.</p></div></section>
 <section id="gramps" hidden><div class="panel"><h2>Gramps change preview — no accepted-tree writes</h2>
 <p class="warning">WP-006 only prepares and records proposals. A human approval here permits future validation, <strong>not execution</strong>. The supplied handles are not checked against a live Gramps installation. Do not use real family data until recovery testing is accepted.</p>
@@ -98,7 +113,7 @@ function formFields(form){let v=Object.fromEntries(new FormData(form).entries())
 async function loadSummary(){const data=await api('/summary');const target=document.querySelector('#summary');target.replaceChildren();Object.entries(data).forEach(([k,v])=>{const b=elt('div',undefined,'panel');b.append(elt('h2',k.replaceAll('_',' ')),elt('strong',v));target.append(b)});}
 async function loadDocuments(){const q=document.querySelector('#doc-q').value;const data=await api('/documents?q='+encodeURIComponent(q));const root=document.querySelector('#documents-list');root.replaceChildren();data.forEach(x=>item(root,[x.title,x.provider+' | '+x.reference,'ID: '+x.id,'Rights: '+x.licence]));}
 async function loadObservations(){const q=document.querySelector('#ob-q').value;const data=await api('/observations?q='+encodeURIComponent(q));const root=document.querySelector('#observations-list');root.replaceChildren();
-data.forEach(x=>{const card=item(root,[x.person_name_verbatim,'Event: '+x.event_type+' | '+x.event_date_verbatim+' | '+x.location_verbatim,'ID: '+x.id]);const b=elt('button','Suggest identity matches','action');b.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/suggest-matches','POST');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.person_name_verbatim,'Rank '+y.ranking_score+' (NOT a probability)',y.explanation]));}catch(e){notify(e.message,true)}};card.append(b);});}
+data.forEach(x=>{const card=item(root,[x.person_name_verbatim,'Event: '+x.event_type+' | '+x.event_date_verbatim+' | '+x.location_verbatim,'ID: '+x.id]);const hb=elt('button','Historical candidate triage','action');hb.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/historical-candidates');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.name_as_recorded,'Heuristic rank '+y.ranking_score+' — NOT a probability',...y.warnings]));}catch(e){notify(e.message,true)}};card.append(hb);const b=elt('button','Suggest identity matches','action');b.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/suggest-matches','POST');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.person_name_verbatim,'Rank '+y.ranking_score+' (NOT a probability)',y.explanation]));}catch(e){notify(e.message,true)}};card.append(b);});}
 async function loadGraph(groupId){
 const root=document.querySelector('#graph-comparison');root.replaceChildren();root.append(elt('h3','Competing relationship branches'));
 const data=await api('/hypotheses/'+encodeURIComponent(groupId)+'/graph');
@@ -116,13 +131,26 @@ root.append(elt('p','Structural comparison only. Original source groups may not 
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
-const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs};
+const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
 document.querySelector('#doc-search').onclick=()=>loadDocuments().catch(e=>notify(e.message,true));
 document.querySelector('#ob-search').onclick=()=>loadObservations().catch(e=>notify(e.message,true));
 document.querySelector('#document-form').onsubmit=async e=>{e.preventDefault();try{const data=await api('/documents','POST',formFields(e.target));notify('Document '+(data.created?'registered':'already exists')+' | UUID: '+data.id);e.target.reset();await loadDocuments()}catch(err){notify(err.message,true)}};
 document.querySelector('#observation-form').onsubmit=async e=>{e.preventDefault();try{const data=formFields(e.target);const doc=data.document_id;delete data.document_id;const result=await api('/documents/'+encodeURIComponent(doc)+'/observations','POST',data);notify('Person appearance '+(result.created?'created':'already exists')+' | '+result.id);await loadObservations()}catch(err){notify(err.message,true)}};
 document.querySelector('#job-form').onsubmit=async e=>{e.preventDefault();try{const v=formFields(e.target);v.cost_limit_usd=Number(v.cost_limit_usd||0);const result=await api('/jobs','POST',v);notify('Job stored as '+result.status+'; execution engine pending');await loadJobs()}catch(err){notify(err.message,true)}};
+async function loadHistorical(){const q=document.querySelector('#historical-q').value;
+  const rows=await api('/historical-places?q='+encodeURIComponent(q));
+  const root=document.querySelector('#historical-list');root.replaceChildren();
+  rows.forEach(x=>item(root,[x.label+' · '+x.county_label,'Jurisdiction: '+x.jurisdiction_type,
+    'Years: '+(x.valid_from_year??'?')+'–'+(x.valid_to_year??'?'), 'Source UUID: '+x.source_document_id,
+    'Evidence: '+x.evidence_note]));}
+document.querySelector('#historical-search').onclick=()=>loadHistorical().catch(e=>notify(e.message,true));
+document.querySelector('#historical-form').onsubmit=async e=>{e.preventDefault();try{
+  const b=formFields(e.target); b.aliases_json=[];
+  for(const key of ['valid_from_year','valid_to_year'])if(b[key]==='')delete b[key];else if(b[key]!==undefined)b[key]=Number(b[key]);
+  const x=await api('/historical-places','POST',b);notify('Historic place '+(x.created?'registered':'already recorded')+' '+x.id);
+  await loadHistorical();
+}catch(error){notify(error.message,true)}};
 let grampsPreviewRequest=null, grampsPreview=null, grampsPlan=null;
 document.querySelector('#gramps-preview-form').onsubmit=async e=>{e.preventDefault();
   try{const b=formFields(e.target);b.expected_set_version=Number(b.expected_set_version);b.bindings=JSON.parse(b.bindings);
