@@ -76,6 +76,19 @@ def test_observation_corrections_are_append_only(client):
     assert client.get(f'/api/v1/research/observations/{oid}',headers=AUTH).json()['transcription_verbatim']=='John Carter baptized'
 
 
+def test_duplicate_ids_reject_changed_source_and_observation_content(client):
+    did=source(client)
+    assert client.post('/api/v1/research/documents',headers=WRITE,
+                       json={**DOC,'title':'Different source page'}).status_code==409
+    oid=appearance(client,did)
+    for changed in ({**OBS,'transcription_verbatim':'Different original reading'},
+                    {**OBS,'earliest_iso':'1789-05-01'}):
+        assert client.post(f'/api/v1/research/documents/{did}/observations',
+                           headers=WRITE,json=changed).status_code==409
+    history=client.get(f'/api/v1/research/observations/{oid}/transcriptions',headers=AUTH).json()
+    assert [revision['text'] for revision in history]==['John Carter baptized']
+
+
 def test_bad_date_range_does_not_insert(client):
     did=source(client)
     r=client.post(f'/api/v1/research/documents/{did}/observations',headers=WRITE,

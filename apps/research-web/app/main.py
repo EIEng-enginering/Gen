@@ -1,6 +1,7 @@
-"""24 Gen: deliberately small, read-only local authenticated WP-001 web scaffold.
+"""24 Gen local authenticated provisional research service.
 
-NOT a genealogy matching engine; all advanced features remain deferred.
+Research writes stay in the provisional database; Gramps tree access is read-only.
+Candidate ranking is uncalibrated and no autonomous research worker is installed.
 """
 import html
 import os
@@ -58,14 +59,15 @@ def health() -> dict:
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {'service': '24 Gen Research', 'stage': 'WP-002 provisional evidence candidate (pending R0.1 acceptance)',
             'research_database_connected': database_check(),
-            'gramps_integration': 'not_connected',
+            'gramps_integration': 'optional_read_only_probe_not_live_verified',
             'autonomous_search': 'not_implemented'}
 
 
 @app.get('/api/v1/features')
 def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {
-        'implemented': ['local_password_gate', 'research_dashboard_stub', 'provisional_evidence_workspace',
+        'implemented': ['local_password_gate', 'provisional_evidence_workspace',
+                        'manual_csv_import', 'uncalibrated_candidate_ranker',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
@@ -108,7 +110,7 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     <p>Do not store real genealogy data until the live backup and restore gates pass.
     The provisional evidence schema and manual record import are present. The
     Gramps write adapter and autonomous research are not implemented. This page does not change the accepted tree.</p></article>
-    <p class="label">WP-001: read-only UI scaffold · loopback deployment only</p></main></body></html>"""
+    <p class="label">WP-002–004: provisional evidence candidate · loopback deployment only</p></main></body></html>"""
     return HTMLResponse(content=content)
 
 # WP-002 onwards: a separate *provisional* evidence research data plane.

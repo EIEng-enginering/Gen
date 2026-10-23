@@ -1,3 +1,4 @@
+import csv
 from pathlib import Path
 from os import environ
 from alembic import command
@@ -30,6 +31,25 @@ def test_initial_alembic_upgrade_idempotent_import_and_downgrade(tmp_path,monkey
     assert second['duplicates']==3 and second['documents_created']==0
     with Session(eng) as db:
         assert db.scalar(select(func.count()).select_from(Observation))==3
+    with FIXTURE.open(newline='',encoding='utf-8') as source_file:
+        reader=csv.DictReader(source_file)
+        rows=list(reader)
+        fields=reader.fieldnames
+    for field,replacement in [('source_title','Changed source title'),
+                              ('transcription_verbatim','Changed original reading')]:
+        altered=[dict(row) for row in rows]
+        altered[0][field]=replacement
+        conflict_path=tmp_path/f'conflict-{field}.csv'
+        with conflict_path.open('w',newline='',encoding='utf-8') as target_file:
+            writer=csv.DictWriter(target_file,fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(altered)
+        outcome=import_csv(str(conflict_path),dry_run=False)
+        assert len(outcome['errors'])==1 and outcome['errors'][0]['row']==2
+        assert outcome['duplicates']==2
+    with Session(eng) as db:
+        assert db.scalar(select(SourceDocument.title).where(SourceDocument.provider_record_id=='DEMO-001'))=='Demonstration parish register'
+        assert db.scalar(select(Observation.transcription_verbatim).where(Observation.observation_key=='entry-1'))=='John Carter baptised'
     eng.dispose();close_engine()
     # Protect against accidental destruction in real installations.
     import pytest

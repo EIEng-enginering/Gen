@@ -64,7 +64,7 @@ def create_document(body:DocumentIn,db:DB,user:Annotated[str,Depends(main.authen
                                                    SourceDocument.provider_record_id==body.provider_record_id))
     if existing:
         # Idempotent only for identical identifying provenance; otherwise collision.
-        if (existing.reference,existing.origin_group,existing.licence,existing.access_method)!=(body.reference,body.origin_group,body.licence,body.access_method):
+        if any(getattr(existing,key)!=value for key,value in body.model_dump().items()):
             raise HTTPException(409,'Existing provider ID has conflicting provenance')
         return {'id':str(existing.id),'created':False}
     doc=SourceDocument(**body.model_dump(),acquisition_operator=user)
@@ -94,12 +94,12 @@ def document_detail(document_id:UUID,db:DB):
 def add_observation(document_id:UUID,body:ObservationIn,db:DB,user:Annotated[str,Depends(main.authenticate)]):
     required(db,SourceDocument,document_id)
     old=db.scalar(select(Observation).where(Observation.document_id==document_id,Observation.observation_key==body.observation_key))
+    values=body.model_dump(mode='json')
     if old:
-        if any(getattr(old,k)!=v for k,v in [('person_name_verbatim',body.person_name_verbatim),('event_type',body.event_type),('event_date_verbatim',body.event_date_verbatim),('location_verbatim',body.location_verbatim) ]):
+        if any(getattr(old,key)!=value for key,value in values.items()):
             raise HTTPException(409,'Observation key conflict; record a transcription revision instead')
         return {'id':str(old.id),'created':False}
-    d=body.model_dump(mode='json')
-    obj=Observation(document_id=document_id,**d)
+    obj=Observation(document_id=document_id,**values)
     db.add(obj);db.flush()
     if body.transcription_verbatim:
         db.add(TranscriptionRevision(observation_id=obj.id,text=body.transcription_verbatim,

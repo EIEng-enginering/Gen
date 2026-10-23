@@ -48,6 +48,8 @@ def import_csv(path:str,operator='local_import',dry_run=True,max_rows=100000):
                         transcription_verbatim=row.get('transcription_verbatim') or '')
                     if dry_run:
                         continue
+                    document_values=d.model_dump()
+                    observation_values=o.model_dump(mode='json')
                     new_document=False
                     new_observation=False
                     duplicate=False
@@ -55,19 +57,19 @@ def import_csv(path:str,operator='local_import',dry_run=True,max_rows=100000):
                         old=db.scalar(select(SourceDocument).where(SourceDocument.provider==d.provider,
                                               SourceDocument.provider_record_id==d.provider_record_id))
                         if old is None:
-                            old=SourceDocument(**d.model_dump(),acquisition_operator=operator)
+                            old=SourceDocument(**document_values,acquisition_operator=operator)
                             db.add(old);db.flush()
                             new_document=True
-                        elif (old.reference,old.origin_group,old.licence,old.access_method)!=(d.reference,d.origin_group,d.licence,d.access_method):
+                        elif any(getattr(old,key)!=value for key,value in document_values.items()):
                             raise ValueError('Provider record ID conflicts with existing source provenance')
                         existing=db.scalar(select(Observation).where(Observation.document_id==old.id,
                                                  Observation.observation_key==o.observation_key))
                         if existing:
-                            if any(getattr(existing,k)!=v for k,v in [('person_name_verbatim',o.person_name_verbatim),('event_type',o.event_type),('event_date_verbatim',o.event_date_verbatim),('location_verbatim',o.location_verbatim)]):
+                            if any(getattr(existing,key)!=value for key,value in observation_values.items()):
                                 raise ValueError('Previously imported observation has conflicting content')
                             duplicate=True
                         else:
-                            obj=Observation(document_id=old.id,**o.model_dump(mode='json'))
+                            obj=Observation(document_id=old.id,**observation_values)
                             db.add(obj);db.flush()
                             if o.transcription_verbatim:
                                 db.add(TranscriptionRevision(observation_id=obj.id,text=o.transcription_verbatim,
