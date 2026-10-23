@@ -172,3 +172,54 @@ class AuditEvent(Base):
     details_json = Column(JSON,nullable=False,default=dict)
     created_at = Column(DateTime(timezone=True),default=now,nullable=False)
     __table_args__ = (Index('ix_audit_target','target_type','target_id'),)
+
+
+class BranchRevision(Base):
+    """Immutable snapshot of one competing hypothesis option (never a Gramps edit)."""
+    __tablename__ = 'hypothesis_branch_revisions'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    hypothesis_set_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_sets.id', ondelete='RESTRICT'), nullable=False)
+    option_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_options.id', ondelete='RESTRICT'), nullable=False)
+    revision_number = Column(Integer, nullable=False)
+    rationale = Column(Text, nullable=False)
+    created_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now, nullable=False)
+    __table_args__ = (
+        UniqueConstraint('option_id', 'revision_number', name='uq_branch_option_revision'),
+        CheckConstraint('revision_number >= 1', name='ck_branch_revision_positive'),
+        Index('ix_branch_revision_set', 'hypothesis_set_id', 'option_id'),
+    )
+
+
+class BranchEdge(Base):
+    """An edge belongs to a frozen branch revision, not to an accepted tree."""
+    __tablename__ = 'hypothesis_branch_edges'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    revision_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_branch_revisions.id', ondelete='RESTRICT'), nullable=False)
+    edge_key = Column(String(100), nullable=False)
+    from_observation_id = Column(Uuid(as_uuid=True), ForeignKey('observations.id', ondelete='RESTRICT'), nullable=False)
+    to_observation_id = Column(Uuid(as_uuid=True), ForeignKey('observations.id', ondelete='RESTRICT'), nullable=False)
+    relationship_type = Column(String(40), nullable=False)
+    supporting_observation_ids = Column(JSON, nullable=False, default=list)
+    contradicting_observation_ids = Column(JSON, nullable=False, default=list)
+    reasoning = Column(Text, nullable=False)
+    __table_args__ = (
+        UniqueConstraint('revision_id', 'edge_key', name='uq_branch_edge_key'),
+        CheckConstraint('from_observation_id <> to_observation_id', name='ck_branch_distinct_nodes'),
+        CheckConstraint("relationship_type IN ('biological_parent','adoptive_parent','step_parent','spouse','sibling','same_person','household_association')", name='ck_branch_relationship'),
+    )
+
+
+class BranchReview(Base):
+    """Append-only human research judgement; this never changes Gramps."""
+    __tablename__ = 'hypothesis_branch_reviews'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    revision_id = Column(Uuid(as_uuid=True), ForeignKey('hypothesis_branch_revisions.id', ondelete='RESTRICT'), nullable=False)
+    decision = Column(String(30), nullable=False)
+    reason = Column(Text, nullable=False)
+    reviewer = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now, nullable=False)
+    __table_args__ = (
+        CheckConstraint("decision IN ('research_supported','rejected','deferred')", name='ck_branch_review'),
+        Index('ix_branch_review_revision', 'revision_id', 'created_at'),
+    )
