@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "compose_project": "gen24",
+  "volumes": [
+    "gramps_users",
+    "gramps_index",
+    "gramps_thumb_cache",
+    "gramps_cache",
+    "gramps_secret",
+    "gramps_db",
+    "gramps_media",
+    "gramps_tmp",
+    "research_postgres"
+  ]
+}
