@@ -3,9 +3,10 @@ info:
   title: 24 Gen Research API (future contract baseline)
   version: 1.0.0-draft
   description: >-
-    Contract skeleton only. WP-001 actually implements /health, /api/v1/status
-    and /api/v1/features, but detailed identity, document, job and approval APIs
-    remain deferred until their work packages are validated.
+    Revision A future-contract skeleton. WP-002 implemented provisional
+    /api/v1/research/* endpoints independently; see docs/wp002/OPENAPI_RESEARCH.json.
+    Approved Gramps tree mutations remain deferred. This draft retains its future
+    path proposals, which are NOT evidence that they are implemented.
 servers:
   - url: http://127.0.0.1:8765
 paths:
@@ -41,8 +42,8 @@ paths:
         '200': {description: Future result}
   /api/v1/research/jobs:
     post:
-      summary: Future bounded authorised research job
-      x-implementation-status: deferred
+      summary: Task registration only (not an executing background worker)
+      x-implementation-status: provisional_registration_only
       responses:
         '202': {description: Future job accepted}
   /api/v1/approvals/{id}/apply:
