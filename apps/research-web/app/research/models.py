@@ -295,3 +295,85 @@ class HistoricalPlace(Base):
         CheckConstraint('valid_from_year IS NULL OR valid_to_year IS NULL OR valid_from_year <= valid_to_year', name='ck_historical_place_interval'),
         Index('ix_historical_place_county', 'county_label', 'label'),
     )
+
+# WP-010: human-attested shared-original provenance, never a document merge.
+class OriginalSourceFamily(Base):
+    __tablename__ = 'original_source_families'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    family_key = Column(String(180), nullable=False, unique=True)
+    description = Column(String(500), nullable=False)
+    rationale = Column(Text, nullable=False)
+    created_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+
+
+class OriginalSourceMember(Base):
+    __tablename__ = 'original_source_members'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    family_id = Column(Uuid(as_uuid=True), ForeignKey('original_source_families.id', ondelete='RESTRICT'), nullable=False)
+    document_id = Column(Uuid(as_uuid=True), ForeignKey('source_documents.id', ondelete='RESTRICT'), nullable=False, unique=True)
+    justification = Column(Text, nullable=False)
+    created_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    __table_args__ = (Index('ix_source_members_family', 'family_id'),)
+
+
+# WP-011: local, supervised task queue; no network executor or billing integration.
+class ResearchTask(Base):
+    __tablename__ = 'research_tasks'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    job_id = Column(Uuid(as_uuid=True), ForeignKey('research_jobs.id', ondelete='RESTRICT'), nullable=False)
+    task_key = Column(String(160), nullable=False)
+    kind = Column(String(40), nullable=False)
+    source_provider = Column(String(120), nullable=False)
+    input_json = Column(JSON, nullable=False, default=dict)
+    status = Column(String(25), nullable=False, default='queued')
+    reserved_cost_cents = Column(Integer, nullable=False, default=0)
+    spent_cost_cents = Column(Integer, nullable=False, default=0)
+    lease_owner = Column(String(120))
+    lease_token_sha256 = Column(String(64))
+    lease_expires_at = Column(DateTime(timezone=True))
+    attempt = Column(Integer, nullable=False, default=0)
+    completed_key = Column(String(160))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    __table_args__ = (
+        UniqueConstraint('job_id', 'task_key', name='uq_task_job_key'),
+        CheckConstraint("kind IN ('local_review','manual_lookup','approved_api_request')", name='ck_task_kind'),
+        CheckConstraint("status IN ('queued','leased','paused','complete','failed','cancelled')", name='ck_task_status'),
+        CheckConstraint('reserved_cost_cents >= 0 AND spent_cost_cents >= 0', name='ck_task_money'),
+        CheckConstraint('attempt >= 0', name='ck_task_attempt'),
+        Index('ix_task_job_status', 'job_id', 'status'),
+    )
+
+class SourceCacheReceipt(Base):
+    """Rights-aware cache audit metadata; never stores source images or raw data."""
+    __tablename__='source_cache_receipts'
+    id=Column(Uuid(as_uuid=True),primary_key=True,default=uuid)
+    source_document_id=Column(Uuid(as_uuid=True),ForeignKey('source_documents.id',ondelete='RESTRICT'),nullable=False)
+    cache_key=Column(String(250),nullable=False,unique=True)
+    checksum_sha256=Column(String(64))
+    rights_basis=Column(String(200),nullable=False)
+    acquisition_method=Column(String(30),nullable=False)
+    expires_at=Column(DateTime(timezone=True))
+    stored_by=Column(String(120),nullable=False)
+    created_at=Column(DateTime(timezone=True),nullable=False,default=now)
+    __table_args__=(CheckConstraint("acquisition_method IN ('user_import','approved_api','licensed_dataset')",name='ck_cache_receipt_method'),)
+
+
+class SourceProviderPolicy(Base):
+    """Manually approved provider limits; not an authorisation to call the provider."""
+    __tablename__='source_provider_policies'
+    id=Column(Uuid(as_uuid=True),primary_key=True,default=uuid)
+    provider=Column(String(120),nullable=False,unique=True)
+    access_mode=Column(String(35),nullable=False)
+    permission_reference=Column(String(500),nullable=False)
+    requests_per_day=Column(Integer,nullable=False,default=0)
+    cooldown_seconds=Column(Integer,nullable=False,default=0)
+    daily_budget_cents=Column(Integer,nullable=False,default=0)
+    created_by=Column(String(120),nullable=False)
+    created_at=Column(DateTime(timezone=True),nullable=False,default=now)
+    __table_args__=(
+        CheckConstraint("access_mode IN ('manual_only','approved_api','licensed_local_dataset')",name='ck_provider_access_mode'),
+        CheckConstraint('requests_per_day >= 0 AND cooldown_seconds >= 0 AND daily_budget_cents >= 0',name='ck_provider_policy_limits'),
+    )

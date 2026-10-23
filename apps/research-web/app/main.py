@@ -133,3 +133,10 @@ app.include_router(gramps_contract_router)
 # WP-009: source-linked historical places and bounded English identity triage.
 from app.research.historical_api import router as historical_router
 app.include_router(historical_router)
+
+# WP-010/011: source provenance dependence and local supervised task staging.
+# No external provider execution, billable calls or Gramps writes are enabled.
+from app.research.source_families_api import router as source_family_router
+from app.research.task_queue_api import router as task_queue_router
+app.include_router(source_family_router)
+app.include_router(task_queue_router)
