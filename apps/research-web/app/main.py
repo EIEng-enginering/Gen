@@ -61,11 +61,12 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {
         'implemented': ['local_password_gate', 'provisional_evidence_workspace',
                         'manual_csv_import', 'uncalibrated_candidate_ranker',
+                        'versioned_provisional_family_graphs',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
         'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage',
-                                    'LLM_analysis', 'probability_graph',
+                                    'LLM_analysis', 'calibrated_probability_graph',
                                     'autonomous_jobs', 'Gramps_API_approval_adapter'],
     }
 
@@ -110,5 +111,7 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
 # No Gramps write adapter is enabled here.
 from app.research.api import router as research_router
 from app.research.ui import router as workspace_router
+from app.research.graph_api import router as graph_router
 app.include_router(research_router)
+app.include_router(graph_router)
 app.include_router(workspace_router)

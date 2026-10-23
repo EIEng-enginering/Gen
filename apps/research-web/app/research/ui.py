@@ -52,7 +52,7 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <button class="action primary" type="submit">Register appearance</button></form></div>
 <div class="panel"><h2>Person appearances</h2><input id="ob-q" placeholder="Name, place or event"><button class="action" id="ob-search">Search</button>
 <div id="observations-list" class="results"></div><h3>Potential identity matches</h3><p class="hint">Scores rank review candidates; they are not calibrated probability percentages.</p><div id="matches-list"></div></div></div></section>
-<section id="hypotheses" hidden><div class="panel"><h2>Competing family hypotheses</h2><p class="warning">The "other or unknown" alternative is mandatory. Unscored hypotheses remain unscored until validated probability calibration is available.</p><div id="hypothesis-list" class="results"></div><p class="hint">Use the API to create structured, evidence-linked alternatives. Detailed interactive graph editing is a later work package.</p></div></section>
+<section id="hypotheses" hidden><div class="panel"><h2>Competing family hypotheses</h2><p class="warning">The "other or unknown" alternative is mandatory. Unscored hypotheses remain unscored until validated probability calibration is available.</p><div id="hypothesis-list" class="results"></div><div id="graph-comparison" class="panel"><h3>Alternative branch comparison</h3><p class="hint">Select a hypothesis above to inspect versioned proposed relationships, source-group warnings and unknown possibilities. No numerical probabilities or accepted-tree updates are implied.</p></div><p class="hint">Versioned graph editing and research reviews are available through the documented local API.</p></div></section>
 <section id="jobs" hidden><div class="grid"><div class="panel"><h2>Research task</h2><form id="job-form"><label>Research objective <textarea name="objective" required placeholder="Investigate parents of ..."></textarea></label>
 <label>Mode <select name="mode"><option value="guided">AI guided (planning only)</option><option value="conventional">Conventional</option><option value="autonomous">Autonomous (paused until worker added)</option></select></label>
 <label>Budget cap in USD <input name="cost_limit_usd" type="number" min="0" value="0" step="0.01"></label>
@@ -74,7 +74,22 @@ async function loadSummary(){const data=await api('/summary');const target=docum
 async function loadDocuments(){const q=document.querySelector('#doc-q').value;const data=await api('/documents?q='+encodeURIComponent(q));const root=document.querySelector('#documents-list');root.replaceChildren();data.forEach(x=>item(root,[x.title,x.provider+' | '+x.reference,'ID: '+x.id,'Rights: '+x.licence]));}
 async function loadObservations(){const q=document.querySelector('#ob-q').value;const data=await api('/observations?q='+encodeURIComponent(q));const root=document.querySelector('#observations-list');root.replaceChildren();
 data.forEach(x=>{const card=item(root,[x.person_name_verbatim,'Event: '+x.event_type+' | '+x.event_date_verbatim+' | '+x.location_verbatim,'ID: '+x.id]);const b=elt('button','Suggest identity matches','action');b.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/suggest-matches','POST');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.person_name_verbatim,'Rank '+y.ranking_score+' (NOT a probability)',y.explanation]));}catch(e){notify(e.message,true)}};card.append(b);});}
-async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));});}
+async function loadGraph(groupId){
+const root=document.querySelector('#graph-comparison');root.replaceChildren();root.append(elt('h3','Competing relationship branches'));
+const data=await api('/hypotheses/'+encodeURIComponent(groupId)+'/graph');
+root.append(elt('p','Set revision '+data.version+' · unscored hypotheses · accepted tree unchanged','hint'));
+for(const o of data.options){
+  const card=elt('div',undefined,'item');
+  card.append(elt('strong',o.description+(o.is_unknown?' (other / unknown)':'')));
+  if(!o.revision){card.append(elt('div','No graph revision supplied'));root.append(card);continue;}
+  card.append(elt('div','Revision '+o.revision.revision_number+'; '+o.edges.length+' asserted relationships'));
+  for(const e of o.edges){card.append(elt('div',e.relationship_type+': '+e.from_observation_id+' → '+e.to_observation_id));}
+  for(const warning of o.revision.assessment.warnings){card.append(elt('p','Review: '+warning,'hint'));}
+  root.append(card);
+}
+root.append(elt('p','Structural comparison only. Original source groups may not be independent.','hint'));
+}
+async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
 const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,hypotheses:loadHypotheses,jobs:loadJobs};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
