@@ -7,7 +7,7 @@
 | Target baseline and overlay conflicts | **PASS** | Direct Git clone of `EIEng-enginering/Gen` reported no commits or tracked paths; commits and branches are recorded in `BASELINE_REPORT.md`. The GitHub connector still returns 404. |
 | Q01–Q50 decision register | **PASS** | `python -B tools/validate_decisions.py` printed `PASS: all 50 approved decisions match Rev A baseline`. |
 | Python source compilation | **PASS** | `python -B -m compileall -q tools apps/research-web/app apps/research-web/tests` completed. |
-| Python unit/API/static Compose tests | **PASS** | `python -B -m pytest -q apps/research-web/tests`: **8 passed**, one upstream Starlette/AnyIO deprecation warning. Includes two new manifest checks. |
+| Python unit/API/static Compose tests | **PASS** | `python -B -m pytest -q apps/research-web/tests`: **8 passed**, one upstream Starlette/AnyIO deprecation warning. Repeated successfully in the active `C:\24Gen\Gen` checkout using the recorded Windows constraints. Includes two new manifest checks. |
 | Python dependency consistency | **PASS** | `python -m pip check`: `No broken requirements found.` The Windows Python 3.12 dependency snapshot is a development constraint file, not a release image lock. |
 | PowerShell syntax | **PASS** | Windows PowerShell parser found no errors in the five `deploy/windows/*.ps1` files. |
 | Backup OneDrive destination guard | **PASS** | Executed preflight with a OneDrive backup path; script rejected it before Docker operations. |

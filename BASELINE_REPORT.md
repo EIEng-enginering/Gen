@@ -8,7 +8,7 @@
 - The first local baseline commit on `main` is `eb4abe1` (`Initialize 24 Gen repository baseline`). This is a new baseline for the previously empty target, not a pre-existing project SHA.
 - Local integration branches: `feature/wp-000-governance` at `3ae6faf`; `feature/wp-001-foundation` contains `459a559` and corrective commit `fe8eb6c`. The latter branch starts from WP-000, preserving package order.
 - The WP-001 branch includes acceptance evidence at `fed73de`. After the user explicitly authorized publication to the exact URL, `main`, `feature/wp-000-governance`, and `feature/wp-001-foundation` were pushed. Remote refs were verified: `main=eb4abe1`, `WP-000=3ae6faf`, `WP-001=ed3247e` before this report update. No PR was created because the GitHub connector remains unauthorized for the organization and the in-app browser is not signed in.
-- This checkout is an integration and review clone in the OneDrive project folder. It has no `.env` or live data. Move active runtime work to a non-OneDrive checkout before Docker installation or real backups.
+- This checkout is an integration and review clone in the OneDrive project folder. A separate active clone of the published WP-001 branch now exists at `C:\24Gen\Gen`, outside OneDrive. Neither checkout has a generated `.env` or live genealogy data.
 
 ## Source and overlay review
 
@@ -20,7 +20,7 @@
 ## Host/toolchain
 
 - Windows registry reports ProductName `Windows 10 Pro`, build `26200`; PowerShell `7.6.5`; Git `2.54.0.windows.1`.
-- A Python `3.12.14` virtual environment was created in the separate offline development checkout. The pinned WP-001 development requirements installed successfully there. A tested Windows dependency snapshot is in `apps/research-web/constraints-windows-py312.txt`.
+- Python `3.12.14` virtual environments were created in the offline development checkout and `C:\24Gen\Gen`. The WP-001 development requirements installed successfully under the recorded Windows constraint file in the active clone, and all eight tests plus decision validation passed there.
 - WSL reports that the Windows Subsystem for Linux is not installed. Docker Desktop executable and Docker CLI are absent. No Compose start, Gramps import, container image compatibility, backup or restore drill was performed.
 - `wsl --install --no-distribution` exited 1 and repeated that WSL is not installed; no successful WSL setup was observed. The installation may require a Windows administrator session and restart.
 
