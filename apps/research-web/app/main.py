@@ -1,6 +1,7 @@
-"""24 Gen: deliberately small, read-only local authenticated WP-001 web scaffold.
+"""24 Gen local authenticated provisional research service.
 
-NOT a genealogy matching engine; all advanced features remain deferred.
+Research writes stay in the provisional database; Gramps tree access is read-only.
+Candidate ranking is uncalibrated and no autonomous research worker is installed.
 """
 import html
 import os
@@ -31,20 +32,13 @@ def authenticate(credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 
 
 def database_check() -> bool:
-    """Connection-only check; WP-002 introduces all domain schema and migrations."""
+    """Connection-only check against the configured research database."""
     try:
-        import psycopg
-        params = dict(host=os.getenv('GEN_DB_HOST', 'localhost'),
-                      port=int(os.getenv('GEN_DB_PORT', '5432')),
-                      dbname=os.getenv('GEN_DB_NAME', 'gen24'),
-                      user=os.getenv('GEN_DB_USER', 'gen24'),
-                      password=os.getenv('GEN_DB_PASSWORD', ''),
-                      connect_timeout=2)
-        with psycopg.connect(**params) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute('SELECT 1')
-                return cursor.fetchone()[0] == 1
-    except (Exception, ValueError):
+        from sqlalchemy import text
+        from app.research.db import engine
+        with engine().connect() as conn:
+            return conn.scalar(text('SELECT 1')) == 1
+    except Exception:
         return False
 
 
@@ -56,20 +50,21 @@ def health() -> dict:
 
 @app.get('/api/v1/status')
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
-    return {'service': '24 Gen Research', 'stage': 'WP-001 foundation candidate',
+    return {'service': '24 Gen Research', 'stage': 'WP-002 provisional evidence candidate (pending R0.1 acceptance)',
             'research_database_connected': database_check(),
-            'gramps_integration': 'not_connected',
+            'gramps_integration': 'optional_read_only_probe_not_live_verified',
             'autonomous_search': 'not_implemented'}
 
 
 @app.get('/api/v1/features')
 def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {
-        'implemented': ['local_password_gate', 'research_dashboard_stub',
+        'implemented': ['local_password_gate', 'provisional_evidence_workspace',
+                        'manual_csv_import', 'uncalibrated_candidate_ranker',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
-        'planned_not_implemented': ['research_ingestion', 'record_linkage',
+        'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage',
                                     'LLM_analysis', 'probability_graph',
                                     'autonomous_jobs', 'Gramps_API_approval_adapter'],
     }
@@ -102,11 +97,18 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     <article><h2>Research system status</h2><p>Authentication and research database
     infrastructure are available; probabilistic matching and AI features are planned,
     <strong>not yet implemented</strong>.</p>
-    <p><a href="/api/v1/status">View status JSON</a> ·
+    <p><a href="/workspace">Open evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>
-    <p>Do not store real genealogy data here yet. The custom evidence schema,
-    source acquisition rules, Gramps API adapter and automatic research will be added
-    through validated later work packages. This page does not change the accepted tree.</p></article>
-    <p class="label">WP-001: read-only UI scaffold · loopback deployment only</p></main></body></html>"""
+    <p>Do not store real genealogy data until the live backup and restore gates pass.
+    The provisional evidence schema and manual record import are present. The
+    Gramps write adapter and autonomous research are not implemented. This page does not change the accepted tree.</p></article>
+    <p class="label">WP-002–004: provisional evidence candidate · loopback deployment only</p></main></body></html>"""
     return HTMLResponse(content=content)
+
+# WP-002 onwards: a separate *provisional* evidence research data plane.
+# No Gramps write adapter is enabled here.
+from app.research.api import router as research_router
+from app.research.ui import router as workspace_router
+app.include_router(research_router)
+app.include_router(workspace_router)

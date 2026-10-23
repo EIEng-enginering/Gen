@@ -41,6 +41,20 @@ def test_status_and_features_distinguish_planned(monkeypatch):
     assert 'record_linkage' not in features['implemented']
 
 
+def test_status_uses_configured_sqlite_database(monkeypatch,tmp_path):
+    from app.research.db import close_engine
+    monkeypatch.setenv('GEN_ADMIN_USER','admin')
+    monkeypatch.setenv('GEN_ADMIN_PASSWORD','test-password')
+    monkeypatch.setenv('GEN_DB_URL','sqlite:///'+str(tmp_path/'status.sqlite3'))
+    close_engine()
+    try:
+        status=TestClient(main.app).get('/api/v1/status',headers=auth_header())
+        assert status.status_code==200
+        assert status.json()['research_database_connected'] is True
+    finally:
+        close_engine()
+
+
 def test_missing_credentials_are_not_accepted(monkeypatch):
     monkeypatch.delenv('GEN_ADMIN_USER', raising=False)
     monkeypatch.delenv('GEN_ADMIN_PASSWORD', raising=False)
