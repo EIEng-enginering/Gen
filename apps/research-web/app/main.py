@@ -32,20 +32,13 @@ def authenticate(credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 
 
 def database_check() -> bool:
-    """Connection-only check; WP-002 introduces all domain schema and migrations."""
+    """Connection-only check against the configured research database."""
     try:
-        import psycopg
-        params = dict(host=os.getenv('GEN_DB_HOST', 'localhost'),
-                      port=int(os.getenv('GEN_DB_PORT', '5432')),
-                      dbname=os.getenv('GEN_DB_NAME', 'gen24'),
-                      user=os.getenv('GEN_DB_USER', 'gen24'),
-                      password=os.getenv('GEN_DB_PASSWORD', ''),
-                      connect_timeout=2)
-        with psycopg.connect(**params) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute('SELECT 1')
-                return cursor.fetchone()[0] == 1
-    except (Exception, ValueError):
+        from sqlalchemy import text
+        from app.research.db import engine
+        with engine().connect() as conn:
+            return conn.scalar(text('SELECT 1')) == 1
+    except Exception:
         return False
 
 
