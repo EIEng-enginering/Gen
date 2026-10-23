@@ -62,10 +62,12 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
         'implemented': ['local_password_gate', 'provisional_evidence_workspace',
                         'manual_csv_import', 'uncalibrated_candidate_ranker',
                         'versioned_provisional_family_graphs', 'dry_run_gramps_change_plans', 'research_only_human_approval', 'read_only_gramps_handle_and_family_preflight',
+                        'offline_gramps_contract_review', 'non_executable_write_readiness',
+                        'source_cited_historical_place_registry','english_census_aware_candidate_triage',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
-        'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage',
+        'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage', 'full_population_record_linkage',
                                     'LLM_analysis', 'calibrated_probability_graph',
                                     'autonomous_jobs', 'Gramps_API_write_adapter'],
     }
@@ -123,3 +125,11 @@ app.include_router(gramps_plan_router)
 # WP-007: GET-only Gramps person/family fingerprint and human-controlled preflight.
 from app.research.gramps_live_read_api import router as gramps_live_read_router
 app.include_router(gramps_live_read_router)
+
+# WP-008: Gramps schema review and non-executable readiness gates.
+from app.research.gramps_contract_api import router as gramps_contract_router
+app.include_router(gramps_contract_router)
+
+# WP-009: source-linked historical places and bounded English identity triage.
+from app.research.historical_api import router as historical_router
+app.include_router(historical_router)
