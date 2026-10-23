@@ -16,6 +16,7 @@
 | Gramps owner login, GEDCOM/Gramps import and persistence | **NOT RUN** | No running Gramps or disposable import fixture. |
 | Cold backup and isolated restore with media | **NOT RUN** | No Docker volumes or isolated restore stack. Backup script is a review candidate; recoverability is unproven. |
 | Image/API/licence release locks | **NOT RUN** | Gramps, Valkey, PostgreSQL, Python and Alpine helper image digests remain development placeholders; live compatibility and licence review remain outstanding. |
+| Remote publication and PR | **BLOCKED** | `git push --dry-run` showed all three branches could be written. Automatic approval review rejected the actual push as an unapproved export of potentially sensitive repository contents to an unverified external GitHub destination. No remote write or PR occurred. |
 
 ## Changed files and rollback
 
@@ -27,4 +28,4 @@ No database migration or live data change occurred. Before merge, rollback is br
 
 ## Remaining gates
 
-Install WSL2 and Docker Desktop on the intended Windows host, then test Compose and image versions. Use disposable genealogy data for owner setup, import, persistence, cold backup and isolated media restore. Pin tested image digests and verify relevant licences. Confirm the GitHub App's organization access for PR review. Keep R0.1 **NOT ACCEPTED** until every live gate is evidenced.
+Obtain explicit authorization to publish these exact branches to `https://github.com/EIEng-enginering/Gen.git`, then push and arrange PR review. Install WSL2 and Docker Desktop on the intended Windows host, then test Compose and image versions. Use disposable genealogy data for owner setup, import, persistence, cold backup and isolated media restore. Pin tested image digests and verify relevant licences. Confirm the GitHub App's organization access for PR review. Keep R0.1 **NOT ACCEPTED** until every live gate is evidenced.
