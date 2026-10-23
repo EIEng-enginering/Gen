@@ -140,3 +140,7 @@ from app.research.source_families_api import router as source_family_router
 from app.research.task_queue_api import router as task_queue_router
 app.include_router(source_family_router)
 app.include_router(task_queue_router)
+
+# WP-012/013: bounded, read-only provisional chart and alternative views.
+from app.research.tree_view_api import router as tree_view_router
+app.include_router(tree_view_router)
