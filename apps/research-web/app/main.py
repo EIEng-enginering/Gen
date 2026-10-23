@@ -50,7 +50,7 @@ def health() -> dict:
 
 @app.get('/api/v1/status')
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
-    return {'service': '24 Gen Research', 'stage': 'WP-002 provisional evidence candidate (pending R0.1 acceptance)',
+    return {'service': '24 Gen Research', 'stage': 'WP-002–016 provisional research candidate (R0.1 unaccepted)',
             'research_database_connected': database_check(),
             'gramps_integration': 'optional_read_only_handle_preflight_not_live_verified',
             'autonomous_search': 'not_implemented'}
@@ -64,11 +64,13 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
                         'versioned_provisional_family_graphs', 'dry_run_gramps_change_plans', 'research_only_human_approval', 'read_only_gramps_handle_and_family_preflight',
                         'offline_gramps_contract_review', 'non_executable_write_readiness',
                         'source_cited_historical_place_registry','english_census_aware_candidate_triage',
+                        'source_cited_evidence_comparison', 'browser_local_image_preview_only',
+                        'deterministic_cited_guided_research_plans', 'read_only_operations_dashboard',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
         'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage', 'full_population_record_linkage',
-                                    'LLM_analysis', 'calibrated_probability_graph',
+                                    'external_LLM_execution', 'handwriting_OCR_engine', 'calibrated_probability_graph',
                                     'autonomous_jobs', 'Gramps_API_write_adapter'],
     }
 
@@ -98,15 +100,14 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     families, events and citations. Set up the Gramps owner account before import.</p>
     <p><a href="{url}" target="_blank" rel="noopener noreferrer">Open Gramps Web</a></p></article>
     <article><h2>Research system status</h2><p>Authentication and research database
-    infrastructure are available; probabilistic matching and AI features are planned,
-    <strong>not yet implemented</strong>.</p>
+    infrastructure are available; probabilistic matching and AI features are planned, <strong>not yet implemented</strong>. A cited deterministic local research guide and evidence comparison are available without AI model execution.</p>
     <p><a href="/workspace">Open evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>
     <p>Do not store real genealogy data until the live backup and restore gates pass.
     The provisional evidence schema and manual record import are present. The
     Gramps write adapter and autonomous research are not implemented. This page does not change the accepted tree.</p></article>
-    <p class="label">WP-002–004: provisional evidence candidate · loopback deployment only</p></main></body></html>"""
+    <p class="label">WP-002–016: provisional research candidate · loopback deployment only</p></main></body></html>"""
     return HTMLResponse(content=content)
 
 # WP-002 onwards: a separate *provisional* evidence research data plane.
@@ -144,3 +145,12 @@ app.include_router(task_queue_router)
 # WP-012/013: bounded, read-only provisional chart and alternative views.
 from app.research.tree_view_api import router as tree_view_router
 app.include_router(tree_view_router)
+
+# WP-014–016: read-only documentary comparison, offline assistant and operations.
+# No new Gramps writes, provider requests or billable model execution.
+from app.research.evidence_api import router as evidence_router
+from app.research.assistant_api import router as assistant_router
+from app.research.dashboard_api import router as dashboard_router
+app.include_router(evidence_router)
+app.include_router(assistant_router)
+app.include_router(dashboard_router)
