@@ -1,0 +1,27 @@
+# 24 Gen repository baseline — 23 October 2026
+
+## Target repository
+
+- Exact remote: `https://github.com/EIEng-enginering/Gen.git`.
+- GitHub connector: 404 for the linked app account; that account has no installation on the named organization.
+- Direct Git access: `git ls-remote ... HEAD` succeeded with no refs, and cloning the exact URL reported an empty repository. The cloned `main` HEAD had no commit, no tracked files and no existing functionality to preserve.
+- The first local baseline commit on `main` is `eb4abe1` (`Initialize 24 Gen repository baseline`). This is a new baseline for the previously empty target, not a pre-existing project SHA.
+- Local integration branches: `feature/wp-000-governance` at `3ae6faf`; `feature/wp-001-foundation` contains `459a559` and corrective commit `fe8eb6c`. The latter branch starts from WP-000, preserving package order.
+- This checkout is an integration and review clone in the OneDrive project folder. It has no `.env` or live data. Move active runtime work to a non-OneDrive checkout before Docker installation or real backups.
+
+## Source and overlay review
+
+- Source: `24Gen_Master_Development_Package_Rev_A.zip`, SHA-256 `B44C972BDCE5F85EFB28EA2785E61029FB48459F80D6646090F204FCC3427884`.
+- Corrective guidance: `24Gen_Codex_Next_Action_After_Report_Rev_A1.md`. It mentioned a supplied replacement script, manifest, tests and checklist, but those separate files were absent. The correction here was authored from the Markdown requirements and is marked as a review candidate.
+- The exact remote had no files, so there were no overlay path conflicts or existing behaviours to merge. WP-000 added governance and docs, followed by WP-001 scaffold files. No migration, accepted family data or credentials were copied.
+- Changes relative to `main`: `git diff --stat main...feature/wp-001-foundation`. Review each commit separately before merge.
+
+## Host/toolchain
+
+- Windows registry reports ProductName `Windows 10 Pro`, build `26200`; PowerShell `7.6.5`; Git `2.54.0.windows.1`.
+- A Python `3.12.14` virtual environment was created in the separate offline development checkout. The pinned WP-001 development requirements installed successfully there. A tested Windows dependency snapshot is in `apps/research-web/constraints-windows-py312.txt`.
+- WSL reports that the Windows Subsystem for Linux is not installed. Docker Desktop executable and Docker CLI are absent. No Compose start, Gramps import, container image compatibility, backup or restore drill was performed.
+
+## Release state
+
+**WP-000 local checks pass. WP-001 remains a candidate. R0.1 is NOT ACCEPTED.** See `ACCEPTANCE_REPORT.md` for test evidence and blockers. Image digests, licence review, on-device persistence and isolated recovery remain outstanding.
