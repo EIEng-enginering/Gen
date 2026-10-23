@@ -1,0 +1,81 @@
+name: gen24
+services:
+  grampsweb: &gramps_common
+    image: ${GRAMPS_IMAGE:-ghcr.io/gramps-project/grampsweb:latest}
+    restart: unless-stopped
+    environment:
+      GRAMPSWEB_TREE: "24 Gen"
+      GRAMPSWEB_CELERY_CONFIG__broker_url: redis://grampsweb_redis:6379/0
+      GRAMPSWEB_CELERY_CONFIG__result_backend: redis://grampsweb_redis:6379/0
+      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+    depends_on:
+      - grampsweb_redis
+    volumes: &gramps_volumes
+      - gramps_users:/app/users
+      - gramps_index:/app/indexdir
+      - gramps_thumb_cache:/app/thumbnail_cache
+      - gramps_cache:/app/cache
+      - gramps_secret:/app/secret
+      - gramps_db:/root/.gramps/grampsdb
+      - gramps_media:/app/media
+      - gramps_tmp:/tmp
+    ports:
+      - "127.0.0.1:${GRAMPS_PORT:-5055}:5000"
+
+  grampsweb_celery:
+    <<: *gramps_common
+    ports: []
+    command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
+    depends_on:
+      - grampsweb
+      - grampsweb_redis
+
+  grampsweb_redis:
+    image: ${VALKEY_IMAGE:-valkey/valkey:8-alpine}
+    restart: unless-stopped
+    # Broker is private to the Compose network; do not publish its port.
+
+  research_db:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gen24
+      POSTGRES_PASSWORD: ${GEN_DB_PASSWORD:?Run New-Local-Config.ps1 to create .env}
+      POSTGRES_DB: gen24
+    volumes:
+      - research_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gen24 -d gen24"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  research_web:
+    build:
+      context: ../apps/research-web
+    restart: unless-stopped
+    environment:
+      GEN_ADMIN_USER: ${GEN_ADMIN_USER:?Set GEN_ADMIN_USER in .env}
+      GEN_ADMIN_PASSWORD: ${GEN_ADMIN_PASSWORD:?Set GEN_ADMIN_PASSWORD in .env}
+      GEN_DB_HOST: research_db
+      GEN_DB_PORT: "5432"
+      GEN_DB_NAME: gen24
+      GEN_DB_USER: gen24
+      GEN_DB_PASSWORD: ${GEN_DB_PASSWORD:?Set GEN_DB_PASSWORD in .env}
+      GRAMPS_PUBLIC_URL: http://127.0.0.1:${GRAMPS_PORT:-5055}
+    depends_on:
+      research_db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${RESEARCH_PORT:-8765}:8765"
+
+volumes:
+  gramps_users:
+  gramps_index:
+  gramps_thumb_cache:
+  gramps_cache:
+  gramps_secret:
+  gramps_db:
+  gramps_media:
+  gramps_tmp:
+  research_postgres:
