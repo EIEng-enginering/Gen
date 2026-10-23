@@ -1,0 +1,308 @@
+{
+  "project": "24 Gen AI Genealogy System",
+  "revision": "A",
+  "approved_on": "2026-10-23",
+  "count": 50,
+  "decisions": [
+    {
+      "id": "Q01",
+      "selection": "A",
+      "requirement": "England and Wales first, from earliest usable parish registers onward; international expansion later.",
+      "verification": "English/Welsh country-specific datasets, place rules and source metadata; extension interface."
+    },
+    {
+      "id": "Q02",
+      "selection": "A",
+      "requirement": "GEDCOM imports plus manual entry and AI expansion from documented known ancestors.",
+      "verification": "Import fixture with names, events, citations; no duplicate import; manual entry."
+    },
+    {
+      "id": "Q03",
+      "selection": "A",
+      "requirement": "AI may search, interpret and score; uncertain merges and relationships require user approval.",
+      "verification": "No direct mutation of accepted tree from autonomous candidate results."
+    },
+    {
+      "id": "Q04",
+      "selection": "A",
+      "requirement": "Hybrid local Windows website/database and local processing with optional OpenAI cloud API.",
+      "verification": "Application works with cloud AI disabled and never silently transmits records."
+    },
+    {
+      "id": "Q05",
+      "selection": "A",
+      "requirement": "Start with lawful free sources, authorised APIs, manual file imports; consider subscriptions/bulk data later.",
+      "verification": "Provider capability and licence gate prevent prohibited automated access."
+    },
+    {
+      "id": "Q06",
+      "selection": "A",
+      "requirement": "Gramps Web as genealogy foundation; separate research database and AI modules.",
+      "verification": "Accepted people persist in Gramps; research records stored separately."
+    },
+    {
+      "id": "Q07",
+      "selection": "A",
+      "requirement": "Prioritise civil BMD, censuses and parish registers, then probate, newspapers and specialist sources.",
+      "verification": "Connector priorities and record schema cover the first three source classes."
+    },
+    {
+      "id": "Q08",
+      "selection": "A",
+      "requirement": "Research ancestors, siblings, spouses, descendants and surrounding households, expanding progressively.",
+      "verification": "Expansion jobs use bounded breadth/depth, place and time constraints."
+    },
+    {
+      "id": "Q09",
+      "selection": "A",
+      "requirement": "Retain alternative relationships, complete hypothetical branches, probabilities, evidence and unknown options.",
+      "verification": "Conflicting parent candidates coexist without destructive replacement."
+    },
+    {
+      "id": "Q10",
+      "selection": "A",
+      "requirement": "Integrated tree, document viewer, evidence comparison, candidate matches and AI research assistant.",
+      "verification": "UX navigation accepts selected person and displays coordinated panes."
+    },
+    {
+      "id": "Q11",
+      "selection": "A",
+      "requirement": "Preserve original records or permitted links, transcriptions, citations, provenance and AI interpretations separately; immutable evidence.",
+      "verification": "Original assertion remains unchanged after transcript correction."
+    },
+    {
+      "id": "Q12",
+      "selection": "A+B",
+      "requirement": "Use statistical/historical matching AND AI language-model analysis as separate evidence contributors.",
+      "verification": "Traceable independent model outputs; AI cannot assert calibrated probabilities alone."
+    },
+    {
+      "id": "Q13",
+      "selection": "A",
+      "requirement": "Connected Bayesian/evidence-based relationship models calibrated with known cases, unknown option and contradictions.",
+      "verification": "Alternatives and unknown normalise; held-out calibration report."
+    },
+    {
+      "id": "Q14",
+      "selection": "B",
+      "requirement": "Private local installation, basic password protection and standard backups; no elaborate user security initially.",
+      "verification": "Loopback-only listener; password gate; recoverable data/media backup."
+    },
+    {
+      "id": "Q15",
+      "selection": "A",
+      "requirement": "Small focused pilot first; architecture allows incremental millions-scale processing with tested recovery.",
+      "verification": "Index and batching plan; 100k synthetic stress benchmark; restore drill."
+    },
+    {
+      "id": "Q16",
+      "selection": "A",
+      "requirement": "Time-aware English county, parish, registration district, neighbours, boundaries and migration geography.",
+      "verification": "Historical date-specific place resolution includes abolished/renamed districts."
+    },
+    {
+      "id": "Q17",
+      "selection": "A",
+      "requirement": "Historical name variants, phonetics, aliases, nicknames, maiden names and transcription errors preserved.",
+      "verification": "Variant matcher compares differing spellings but returns original forms."
+    },
+    {
+      "id": "Q18",
+      "selection": "A",
+      "requirement": "Reconstruct and link households across censuses including departures, births, marriages and migration.",
+      "verification": "1841 vs 1851 census conventions enforced using fixture households."
+    },
+    {
+      "id": "Q19",
+      "selection": "A+B+C",
+      "requirement": "Expose three modes: autonomous research, AI-guided manual searches and conventional manual search with AI summaries.",
+      "verification": "User can switch modes; progress persists; permissions consistent."
+    },
+    {
+      "id": "Q20",
+      "selection": "A",
+      "requirement": "Investigate conflicts, rank hypotheses and queue material accepted-tree modifications for approval.",
+      "verification": "Conflicting candidates remain separate after review rejection."
+    },
+    {
+      "id": "Q21",
+      "selection": "A",
+      "requirement": "Explore parents, children, siblings, spouses, relatives and connected households in bounded provisional branches.",
+      "verification": "Expansion stops at configurable generation, result and cost caps."
+    },
+    {
+      "id": "Q22",
+      "selection": "A",
+      "requirement": "Connected dependency-aware probabilistic family graph with historical constraints, unknowns and recalculation.",
+      "verification": "No independent multiplication where evidence or events are shared."
+    },
+    {
+      "id": "Q23",
+      "selection": "A",
+      "requirement": "Prioritise research by expected uncertainty reduction, availability, cost and effort.",
+      "verification": "Planner emits auditable ranked searches and budget rationale."
+    },
+    {
+      "id": "Q24",
+      "selection": "A",
+      "requirement": "On new evidence reevaluate affected connections; preserve past results and seek approvals for accepted-tree changes.",
+      "verification": "Versioned hypotheses and impact/review queues."
+    },
+    {
+      "id": "Q25",
+      "selection": "A",
+      "requirement": "Interactive alternative trees, probabilities, source links, geography, timelines, and whole-branch comparisons.",
+      "verification": "Comparative view includes 2 hypotheses and unknown relationship."
+    },
+    {
+      "id": "Q26",
+      "selection": "A",
+      "requirement": "Auto-search authorised APIs/licensed data; restricted sources get manual-assisted links/imports only.",
+      "verification": "Policy registry blocks automatic queries to manual-only providers."
+    },
+    {
+      "id": "Q27",
+      "selection": "A",
+      "requirement": "Pilot family/county dataset, research licensed bulk sources in parallel, expand after validation.",
+      "verification": "Pilot selection and licensed acquisition gate documented."
+    },
+    {
+      "id": "Q28",
+      "selection": "A",
+      "requirement": "Local handwriting recognition plus optional specialist cloud, AI extraction, original image and correction trail.",
+      "verification": "Manual transcription edit never alters original image or prior run."
+    },
+    {
+      "id": "Q29",
+      "selection": "A",
+      "requirement": "Unified search catalogue with provider-specific observations, rights, IDs, URLs and provenance; avoid double counting.",
+      "verification": "Two copies of same census observation deduplicated at evidence-family level."
+    },
+    {
+      "id": "Q30",
+      "selection": "A",
+      "requirement": "Background resumable jobs, caching, source throttling, budgets, cost reporting and paid-acquisition approval.",
+      "verification": "Pause/resume, idempotent retry, budget exceed hard-stop."
+    },
+    {
+      "id": "Q31",
+      "selection": "A",
+      "requirement": "Multiple zoomable ancestor, descendant, hourglass, relationship and fan charts with optional AI overlays.",
+      "verification": "All views preserve selected individual and navigate correctly."
+    },
+    {
+      "id": "Q32",
+      "selection": "A",
+      "requirement": "Accepted tree with toggleable visually distinct alternatives and complete hypothesis comparison.",
+      "verification": "Conflicting branches and unknown category distinguishable without relying on colour."
+    },
+    {
+      "id": "Q33",
+      "selection": "A",
+      "requirement": "Integrated zoomable original image, editable AI transcription, linked citations, and side-by-side fact comparison.",
+      "verification": "Correction is audit logged, original image immutable."
+    },
+    {
+      "id": "Q34",
+      "selection": "A",
+      "requirement": "Natural-language AI assistant and guided actions for cited research and proposed changes requiring approval.",
+      "verification": "No assistant-origin accepted-tree write without reviewed action."
+    },
+    {
+      "id": "Q35",
+      "selection": "A",
+      "requirement": "Research dashboard tracks jobs, discoveries, misses, uncertainty, budgets, approvals; pause/resume/cancel.",
+      "verification": "State changes and usage metrics are displayed accurately."
+    },
+    {
+      "id": "Q36",
+      "selection": "A",
+      "requirement": "ChatGPT prepares specs, modular code, tests and prompts; external coder integrates and reports validation.",
+      "verification": "Work-package manifest, clear integration instructions and evidence template."
+    },
+    {
+      "id": "Q37",
+      "selection": "A",
+      "requirement": "Git increments, migrations, backups, compatibility checks and rollback preserving data.",
+      "verification": "Rollback tested on representative data; no destructive auto-upgrade."
+    },
+    {
+      "id": "Q38",
+      "selection": "A",
+      "requirement": "Automated unit, integration, browser, genealogy, probability and backup/restore tests.",
+      "verification": "Required checks enforceable as CI/acceptance gates."
+    },
+    {
+      "id": "Q39",
+      "selection": "A",
+      "requirement": "Windows Docker persistent installation, shortcuts, health checks and backups to project folder.",
+      "verification": "Windows installation smoke test and local-only port binding."
+    },
+    {
+      "id": "Q40",
+      "selection": "A",
+      "requirement": "Incrementally merge independently validated work packages, releasing only with acceptance reports.",
+      "verification": "No package is marked accepted before recorded tests."
+    },
+    {
+      "id": "Q41",
+      "selection": "A",
+      "requirement": "Apply Genealogical Proof Standard, source/information/evidence classifications and cited conflict resolution.",
+      "verification": "Assessment distinguishes direct, indirect, negative and derivative evidence."
+    },
+    {
+      "id": "Q42",
+      "selection": "A",
+      "requirement": "Historically contextual consistency rules with impossible vs atypical and adoption/remarriage exceptions.",
+      "verification": "Fixtures exercise known false positives and unusual legitimate families."
+    },
+    {
+      "id": "Q43",
+      "selection": "A",
+      "requirement": "Independently reviewed English genealogy gold-standard benchmarks, varied periods and hard negatives.",
+      "verification": "Report precision, recall, false merges, missed links, relationship accuracy."
+    },
+    {
+      "id": "Q44",
+      "selection": "A",
+      "requirement": "Calibrate probabilities with held-out cases by time period, record class and surname; show uncertainty.",
+      "verification": "Reliability diagrams/Brier score/coverage and abstention metrics."
+    },
+    {
+      "id": "Q45",
+      "selection": "A",
+      "requirement": "Log accepted/rejected examples with reasons; controlled retraining/evaluation/versioning/rollback.",
+      "verification": "No model promotion unless independent holdout and regression gates pass."
+    },
+    {
+      "id": "Q46",
+      "selection": "A",
+      "requirement": "Continuously usable releases; foundation then records, AI matching, reconstruction and autonomous research.",
+      "verification": "Each release starts and retains previous core functions."
+    },
+    {
+      "id": "Q47",
+      "selection": "A",
+      "requirement": "Integrate only via documented, versioned Gramps REST API; separate research DB; approved adapter writes.",
+      "verification": "Contract tests prove no direct Gramps database writes."
+    },
+    {
+      "id": "Q48",
+      "selection": "A",
+      "requirement": "First Windows release: persistent Gramps, login, imports, research interface, health, backup/restore and shortcuts; live checkout/data outside OneDrive.",
+      "verification": "Complete locally performed install and cold backup/restore drill required."
+    },
+    {
+      "id": "Q49",
+      "selection": "A",
+      "requirement": "Require traceability, automated regression, integrity/probability/security validation, rollback and acceptance report.",
+      "verification": "Package gate rejects absent evidence or failed checks."
+    },
+    {
+      "id": "Q50",
+      "selection": "A",
+      "requirement": "Master Specification Rev A; 50-decision register; versioned schemas/APIs; modular prompts; traceability; PRs and history.",
+      "verification": "Generated source docs and verification report cross-reference Q1-Q50."
+    }
+  ]
+}
