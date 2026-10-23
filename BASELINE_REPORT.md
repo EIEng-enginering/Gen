@@ -7,7 +7,7 @@
 - Direct Git access: `git ls-remote ... HEAD` succeeded with no refs, and cloning the exact URL reported an empty repository. The cloned `main` HEAD had no commit, no tracked files and no existing functionality to preserve.
 - The first local baseline commit on `main` is `eb4abe1` (`Initialize 24 Gen repository baseline`). This is a new baseline for the previously empty target, not a pre-existing project SHA.
 - Local integration branches: `feature/wp-000-governance` at `3ae6faf`; `feature/wp-001-foundation` contains `459a559` and corrective commit `fe8eb6c`. The latter branch starts from WP-000, preserving package order.
-- The local WP-001 branch includes acceptance evidence at `fed73de`. A dry-run push of `main` and both feature branches succeeded, but the actual push was rejected by automatic approval review because the user had not explicitly authorized exporting these exact contents to this GitHub destination. No remote branch or PR was created.
+- The WP-001 branch includes acceptance evidence at `fed73de`. After the user explicitly authorized publication to the exact URL, `main`, `feature/wp-000-governance`, and `feature/wp-001-foundation` were pushed. Remote refs were verified: `main=eb4abe1`, `WP-000=3ae6faf`, `WP-001=ed3247e` before this report update. No PR was created because the GitHub connector remains unauthorized for the organization and the in-app browser is not signed in.
 - This checkout is an integration and review clone in the OneDrive project folder. It has no `.env` or live data. Move active runtime work to a non-OneDrive checkout before Docker installation or real backups.
 
 ## Source and overlay review
