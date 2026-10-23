@@ -24,7 +24,7 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 </style></head><body><header><div><strong>24 Gen</strong><small>Research workspace · WP-002 provisional evidence</small></div><span>Private local installation — no automatic external searches</span></header>
 <nav aria-label="Research sections">
 <button class="active" data-tab="overview">Overview</button><button data-tab="documents">Historical documents</button>
-<button data-tab="observations">Person appearances</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="jobs">Research tasks</button>
+<button data-tab="observations">Person appearances</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button>
 </nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
 <section id="documents" hidden><div class="grid"><div class="panel"><h2>Register a historical document</h2>
@@ -53,6 +53,31 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <div class="panel"><h2>Person appearances</h2><input id="ob-q" placeholder="Name, place or event"><button class="action" id="ob-search">Search</button>
 <div id="observations-list" class="results"></div><h3>Potential identity matches</h3><p class="hint">Scores rank review candidates; they are not calibrated probability percentages.</p><div id="matches-list"></div></div></div></section>
 <section id="hypotheses" hidden><div class="panel"><h2>Competing family hypotheses</h2><p class="warning">The "other or unknown" alternative is mandatory. Unscored hypotheses remain unscored until validated probability calibration is available.</p><div id="hypothesis-list" class="results"></div><div id="graph-comparison" class="panel"><h3>Alternative branch comparison</h3><p class="hint">Select a hypothesis above to inspect versioned proposed relationships, source-group warnings and unknown possibilities. No numerical probabilities or accepted-tree updates are implied.</p></div><p class="hint">Versioned graph editing and research reviews are available through the documented local API.</p></div></section>
+<section id="gramps" hidden><div class="panel"><h2>Gramps change preview — no accepted-tree writes</h2>
+<p class="warning">WP-006 only prepares and records proposals. A human approval here permits future validation, <strong>not execution</strong>. The supplied handles are not checked against a live Gramps installation. Do not use real family data until recovery testing is accepted.</p>
+<form id="gramps-preview-form">
+<label>Hypothesis set UUID <input name="hypothesis_set_id" required></label>
+<label>Selected option key <input name="option_key" required></label>
+<label>Current set version <input name="expected_set_version" type="number" min="1" required></label>
+<label>Latest branch revision UUID <input name="expected_revision_id" required></label>
+<label>Edge mappings as JSON array (edge_key, from_handle, to_handle)<textarea name="bindings" required placeholder='[{"edge_key":"edge-1","from_handle":"ABC","to_handle":"DEF"}]'></textarea></label>
+<button type="submit" class="action primary">Preview proposed links</button></form>
+<h3>Immutable proposed changes</h3><pre id="gramps-preview-result">No preview generated</pre>
+<label>Reason for recording this proposal <textarea id="gramps-note" placeholder="Explain candidate family and supporting original sources"></textarea></label>
+<button class="action" id="gramps-store" type="button" disabled>Record reviewed proposal</button>
+<div id="gramps-approval" hidden><h3>Research approval record</h3>
+<p class="hint">Only a previously research-supported branch can be recorded and approved. This action never modifies Gramps.</p>
+<label>Decision <select id="gramps-decision"><option value="approve_for_future_validation">Approve for future live validation</option><option value="reject">Reject plan</option></select></label>
+<label>Exact confirmation phrase <input id="gramps-confirm" placeholder="APPROVE PLAN [12-character digest prefix]"></label>
+<label>Decision rationale <textarea id="gramps-rationale" required></textarea></label>
+<button type="button" class="action" id="gramps-decide">Record decision (no Gramps write)</button></div>
+<pre id="gramps-output">No proposal recorded</pre>
+<div class="panel"><h3>WP-007: Gramps live read-only validation</h3>
+<p class="warning">Runs authenticated GET calls to inspect claimed Gramps person and family handles. Read-only findings are NOT approval to modify the accepted tree, and upstream objects can change after the check.</p>
+<label>Approved plan UUID <input id="gramps-validate-id" placeholder="Existing approved plan UUID"></label>
+<button type="button" class="action" id="gramps-live-read">Validate handles against live Gramps (read-only)</button>
+<button type="button" class="action" id="gramps-live-history">View validation history</button>
+<pre id="gramps-live-result">No live validation performed</pre></div></div></section>
 <section id="jobs" hidden><div class="grid"><div class="panel"><h2>Research task</h2><form id="job-form"><label>Research objective <textarea name="objective" required placeholder="Investigate parents of ..."></textarea></label>
 <label>Mode <select name="mode"><option value="guided">AI guided (planning only)</option><option value="conventional">Conventional</option><option value="autonomous">Autonomous (paused until worker added)</option></select></label>
 <label>Budget cap in USD <input name="cost_limit_usd" type="number" min="0" value="0" step="0.01"></label>
@@ -91,13 +116,54 @@ root.append(elt('p','Structural comparison only. Original source groups may not 
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
-const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,hypotheses:loadHypotheses,jobs:loadJobs};
+const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
 document.querySelector('#doc-search').onclick=()=>loadDocuments().catch(e=>notify(e.message,true));
 document.querySelector('#ob-search').onclick=()=>loadObservations().catch(e=>notify(e.message,true));
 document.querySelector('#document-form').onsubmit=async e=>{e.preventDefault();try{const data=await api('/documents','POST',formFields(e.target));notify('Document '+(data.created?'registered':'already exists')+' | UUID: '+data.id);e.target.reset();await loadDocuments()}catch(err){notify(err.message,true)}};
 document.querySelector('#observation-form').onsubmit=async e=>{e.preventDefault();try{const data=formFields(e.target);const doc=data.document_id;delete data.document_id;const result=await api('/documents/'+encodeURIComponent(doc)+'/observations','POST',data);notify('Person appearance '+(result.created?'created':'already exists')+' | '+result.id);await loadObservations()}catch(err){notify(err.message,true)}};
 document.querySelector('#job-form').onsubmit=async e=>{e.preventDefault();try{const v=formFields(e.target);v.cost_limit_usd=Number(v.cost_limit_usd||0);const result=await api('/jobs','POST',v);notify('Job stored as '+result.status+'; execution engine pending');await loadJobs()}catch(err){notify(err.message,true)}};
+let grampsPreviewRequest=null, grampsPreview=null, grampsPlan=null;
+document.querySelector('#gramps-preview-form').onsubmit=async e=>{e.preventDefault();
+  try{const b=formFields(e.target);b.expected_set_version=Number(b.expected_set_version);b.bindings=JSON.parse(b.bindings);
+    grampsPreview=await api('/gramps/plans/preview','POST',b);grampsPreviewRequest=b;grampsPlan=null;
+    document.querySelector('#gramps-preview-result').textContent=JSON.stringify(grampsPreview,null,2);
+    document.querySelector('#gramps-store').disabled=false;
+    document.querySelector('#gramps-approval').hidden=true;notify('Dry-run preview generated; Gramps is unchanged.');
+  }catch(err){grampsPreview=null;document.querySelector('#gramps-store').disabled=true;notify(err.message,true)}};
+document.querySelector('#gramps-store').onclick=async()=>{
+  if(!grampsPreview||!grampsPreviewRequest)return;
+  try{const note=document.querySelector('#gramps-note').value.trim();if(note.length<12)throw Error('Explain the reason in at least 12 characters');
+    const input={...grampsPreviewRequest,idempotency_key:crypto.randomUUID(),operator_note:note,expected_preview_digest:grampsPreview.digest_sha256};
+    grampsPlan=await api('/gramps/plans','POST',input);
+    document.querySelector('#gramps-output').textContent=JSON.stringify(grampsPlan,null,2);
+    document.querySelector('#gramps-confirm').placeholder='APPROVE PLAN '+grampsPlan.digest_sha256.slice(0,12);
+    document.querySelector('#gramps-approval').hidden=false;
+    document.querySelector('#gramps-store').disabled=true;notify('Proposal recorded; accepted Gramps tree remains unchanged.');
+  }catch(err){notify(err.message,true)}};
+document.querySelector('#gramps-decide').onclick=async()=>{
+  if(!grampsPlan)return;
+  try{const decision=document.querySelector('#gramps-decision').value;
+    const input={decision,expected_set_version:grampsPlan.set_version_after_creation,
+      expected_preview_digest:grampsPlan.digest_sha256,confirmation:document.querySelector('#gramps-confirm').value.trim(),
+      rationale:document.querySelector('#gramps-rationale').value.trim()};
+    const output=await api('/gramps/plans/'+grampsPlan.id+'/decisions','POST',input);
+    document.querySelector('#gramps-output').textContent=JSON.stringify(output,null,2);
+    document.querySelector('#gramps-approval').hidden=true;notify('Decision recorded. No accepted-tree mutation was performed.');
+  }catch(err){notify(err.message,true)}};
+document.querySelector('#gramps-live-read').onclick=async()=>{
+  const id=document.querySelector('#gramps-validate-id').value.trim();
+  try{const result=await api('/gramps/plans/'+encodeURIComponent(id)+'/read-validate','POST');
+    document.querySelector('#gramps-live-result').textContent=JSON.stringify(result,null,2);
+    notify('Gramps GET-only inspection completed. No accepted-tree change is authorised.');
+  }catch(e){notify(e.message,true)}
+};
+document.querySelector('#gramps-live-history').onclick=async()=>{
+  const id=document.querySelector('#gramps-validate-id').value.trim();
+  try{const result=await api('/gramps/plans/'+encodeURIComponent(id)+'/read-validations');
+    document.querySelector('#gramps-live-result').textContent=JSON.stringify(result,null,2);
+  }catch(e){notify(e.message,true)}
+};
 loadSummary().catch(e=>notify('Database not ready: '+e.message,true));
 </script></body></html>'''
 

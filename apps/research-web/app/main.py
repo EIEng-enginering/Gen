@@ -52,7 +52,7 @@ def health() -> dict:
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {'service': '24 Gen Research', 'stage': 'WP-002 provisional evidence candidate (pending R0.1 acceptance)',
             'research_database_connected': database_check(),
-            'gramps_integration': 'optional_read_only_probe_not_live_verified',
+            'gramps_integration': 'optional_read_only_handle_preflight_not_live_verified',
             'autonomous_search': 'not_implemented'}
 
 
@@ -61,13 +61,13 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {
         'implemented': ['local_password_gate', 'provisional_evidence_workspace',
                         'manual_csv_import', 'uncalibrated_candidate_ranker',
-                        'versioned_provisional_family_graphs',
+                        'versioned_provisional_family_graphs', 'dry_run_gramps_change_plans', 'research_only_human_approval', 'read_only_gramps_handle_and_family_preflight',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
         'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage',
                                     'LLM_analysis', 'calibrated_probability_graph',
-                                    'autonomous_jobs', 'Gramps_API_approval_adapter'],
+                                    'autonomous_jobs', 'Gramps_API_write_adapter'],
     }
 
 
@@ -115,3 +115,11 @@ from app.research.graph_api import router as graph_router
 app.include_router(research_router)
 app.include_router(graph_router)
 app.include_router(workspace_router)
+
+# WP-006: read-only Gramps compatibility and human-reviewed dry-run plans.
+from app.research.gramps_plan_api import router as gramps_plan_router
+app.include_router(gramps_plan_router)
+
+# WP-007: GET-only Gramps person/family fingerprint and human-controlled preflight.
+from app.research.gramps_live_read_api import router as gramps_live_read_router
+app.include_router(gramps_live_read_router)
