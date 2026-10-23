@@ -1,0 +1,23 @@
+# Package Acceptance Report — TEMPLATE
+
+- Package ID / version:
+- Baseline Git SHA / resulting SHA / feature branch:
+- Git remote / access permission result:
+- Date / reviewer / machine Windows version:
+- Docker Desktop / WSL2 / Compose versions:
+- Gramps frontend/API and image digest:
+- Source overlays applied and conflicting files reviewed:
+- Requirements satisfied (Q IDs):
+- Static analysis: PASS / FAIL / NOT RUN — command + logs:
+- Unit tests: PASS / FAIL / NOT RUN — command + logs:
+- Integration/API tests: PASS / FAIL / NOT RUN — command + logs:
+- Browser / user acceptance: PASS / FAIL / NOT RUN — screenshots and observations:
+- Persistence after `docker compose down` and restart: PASS / FAIL / NOT RUN:
+- Full accepted-data + media + research-database backup: PASS / FAIL / NOT RUN — SHA256 manifest:
+- Isolated restore and integrity verification: PASS / FAIL / NOT RUN:
+- Security / localhost binding / secrets scan: PASS / FAIL / NOT RUN:
+- Permissions and licence checks: PASS / FAIL / NOT RUN:
+- Probability/evidence regression if relevant: PASS / FAIL / NOT RUN:
+- Remaining risks / skipped steps / release blockers:
+- Rollback procedure tested:
+- Acceptance decision: REJECTED / CONDITIONAL / APPROVED:

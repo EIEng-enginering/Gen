@@ -1,0 +1,23 @@
+name: 24 Gen quality baseline
+on:
+  push:
+  pull_request:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate approved decision baseline
+        run: python tools/validate_decisions.py
+      - name: Compile tools
+        run: python -m compileall -q tools
+      - name: Run research app tests when WP-001 exists
+        shell: bash
+        run: |
+          if [ -f apps/research-web/requirements-dev.txt ]; then
+            python -m pip install -r apps/research-web/requirements-dev.txt
+            python -m pytest -q apps/research-web/tests
+          fi

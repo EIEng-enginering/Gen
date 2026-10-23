@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info:
+  title: 24 Gen Research API (future contract baseline)
+  version: 1.0.0-draft
+  description: >-
+    Contract skeleton only. WP-001 actually implements /health, /api/v1/status
+    and /api/v1/features, but detailed identity, document, job and approval APIs
+    remain deferred until their work packages are validated.
+servers:
+  - url: http://127.0.0.1:8765
+paths:
+  /health:
+    get:
+      summary: Minimal non-sensitive liveness
+      responses:
+        '200':
+          description: Service process is running
+  /api/v1/status:
+    get:
+      summary: Authenticated infrastructure status
+      security: [{basicAuth: []}]
+      responses:
+        '200':
+          description: Shows known implemented/deferred state
+        '401':
+          description: Not authenticated
+  /api/v1/features:
+    get:
+      summary: Authenticated feature status
+      security: [{basicAuth: []}]
+      responses:
+        '200':
+          description: Separate implemented/provided-by-Gramps/future features
+  /api/v1/people/{id}/candidates:
+    get:
+      summary: Future candidate identity and relationship list
+      x-implementation-status: deferred
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Future result}
+  /api/v1/research/jobs:
+    post:
+      summary: Future bounded authorised research job
+      x-implementation-status: deferred
+      responses:
+        '202': {description: Future job accepted}
+  /api/v1/approvals/{id}/apply:
+    post:
+      summary: Future reviewed Gramps API mutation
+      x-implementation-status: deferred
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Future verified Gramps change}
+        '409': {description: Stale Gramps revision or incompatible proposed write}
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
