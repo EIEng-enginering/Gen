@@ -57,8 +57,13 @@ def birth_year(record):
     return lower if lower == upper else None
 
 
-def assessment(edges, observations, documents):
+def assessment(edges, observations, documents, source_groups=None):
     """Display warnings and source lineage without falsely claiming independence."""
+    # WP-013 source grouping is conservative. A group's distinct key means
+    # "not currently linked", never "verified independent".
+    source_groups = source_groups or []
+    possible_origin = {str(doc_id): group['group_id']
+                       for group in source_groups for doc_id in group['document_ids']}
     warnings = []
     seen_warnings = set()
     edge_results = []
@@ -71,11 +76,27 @@ def assessment(edges, observations, documents):
             origins.setdefault(doc.origin_group, []).append(str(raw_id))
         supporting_origins = {documents[str(observations[str(x)].document_id)].origin_group for x in edge.supporting_observation_ids}
         contradicting_origins = {documents[str(observations[str(x)].document_id)].origin_group for x in edge.contradicting_observation_ids}
+        unique_documents = {str(documents[str(observations[str(x)].document_id)].id) for x in evidence}
+        grouped_evidence = defaultdict(list)
+        for raw_id in evidence:
+            doc = documents[str(observations[str(raw_id)].document_id)]
+            grouped_evidence[possible_origin.get(str(doc.id), str(doc.id))].append(str(raw_id))
+        support_candidates = {possible_origin.get(str(observations[str(x)].document_id),
+                                                  str(observations[str(x)].document_id))
+                              for x in edge.supporting_observation_ids}
+        contradict_candidates = {possible_origin.get(str(observations[str(x)].document_id),
+                                                     str(observations[str(x)].document_id))
+                                 for x in edge.contradicting_observation_ids}
         local = []
         if any(len(ids) > 1 for ids in origins.values()):
             local.append('Multiple cited observations share one declared original-source group; do not double-count them')
         if supporting_origins & contradicting_origins:
             local.append('Supporting and contradicting citations share an original-source group; inspect the underlying document')
+        if any(len({str(observations[str(oid)].document_id) for oid in ids}) > 1
+               for ids in grouped_evidence.values()):
+            local.append('WP-010 indicates possibly dependent original documents across catalogue entries; do not count as independent corroboration')
+        if support_candidates & contradict_candidates:
+            local.append('Support and contradiction may derive from one original source under WP-010 provenance grouping')
         if not edge.supporting_observation_ids:
             local.append('No supporting observations cited for this relationship')
         if edge.relationship_type in PARENT:
@@ -99,11 +120,17 @@ def assessment(edges, observations, documents):
             'edge_key': edge.edge_key,
             'distinct_declared_origin_groups': len(origins),
             'declared_origin_groups': sorted(origins),
+            'potential_original_group_count': len(grouped_evidence),
+            'possible_original_group_ids': sorted(grouped_evidence),
+            'independence_verified': False,
             'warnings': local,
         })
     return {'edge_assessments': edge_results, 'warnings': warnings,
             'calibration_status': 'unscored', 'probability': None,
-            'evidence_warning': 'Declared source groups do not guarantee truly independent evidence'}
+            'evidence_warning': ('Conservatively grouped possible shared originals; neither distinct origin keys '
+                                 'nor different documents establish independent corroboration'),
+            'independence_verified': False,
+            'source_family_integration': 'WP-010 conservative grouping'}
 
 
 def compare_options(options):

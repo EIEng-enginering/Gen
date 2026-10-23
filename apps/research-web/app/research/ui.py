@@ -20,6 +20,13 @@ h2{font-size:18px;margin:0 0 10px}h3{font-size:15px}p{margin:6px 0 12px}.muted,.
 label{display:block;font-size:13px;font-weight:600;margin:8px 0 3px}input,select,textarea{font:inherit;width:100%;border:1px solid #a9b8c4;border-radius:7px;padding:9px;background:white}textarea{min-height:80px}input[type='checkbox']{width:auto}
 pre{background:#f0f4f6;padding:10px;border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
 .results{max-height:460px;overflow-y:auto}.item{border-top:1px solid var(--line);padding:10px 0}.item button{margin-top:6px}.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:30px;background:#eaf1f5;margin:2px}.warning{padding:10px 12px;border-left:4px solid #b77e13;background:#fffae9}.notice{margin:6px 0;padding:9px 12px;background:#e7f4ed;border-radius:6px}.error{background:#ffeded;color:#8e2626}
+.family-diagram{border:1px solid var(--line);border-radius:8px;max-width:100%;overflow:auto;background:#fff}
+.family-diagram svg{width:100%;min-width:390px;height:auto;display:block}
+.family-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.family-branches .branch-card{border:1px solid var(--line);border-radius:9px;padding:12px;min-width:0}
+.family-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;margin:8px 0}
+.family-legend span{padding:2px 6px;border-radius:3px;background:#f3f6f8}
+.family-chart-list{font-size:12px;max-height:150px;overflow:auto}
 section[hidden]{display:none!important}button:focus,input:focus,select:focus,textarea:focus{outline:2px solid #be812c;outline-offset:2px}
 </style></head><body><header><div><strong>24 Gen</strong><small>Research workspace · WP-002 provisional evidence</small></div><span>Private local installation — no automatic external searches</span></header>
 <nav aria-label="Research sections">
@@ -130,20 +137,72 @@ async function loadSummary(){const data=await api('/summary');const target=docum
 async function loadDocuments(){const q=document.querySelector('#doc-q').value;const data=await api('/documents?q='+encodeURIComponent(q));const root=document.querySelector('#documents-list');root.replaceChildren();data.forEach(x=>item(root,[x.title,x.provider+' | '+x.reference,'ID: '+x.id,'Rights: '+x.licence]));}
 async function loadObservations(){const q=document.querySelector('#ob-q').value;const data=await api('/observations?q='+encodeURIComponent(q));const root=document.querySelector('#observations-list');root.replaceChildren();
 data.forEach(x=>{const card=item(root,[x.person_name_verbatim,'Event: '+x.event_type+' | '+x.event_date_verbatim+' | '+x.location_verbatim,'ID: '+x.id]);const hb=elt('button','Historical candidate triage','action');hb.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/historical-candidates');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.name_as_recorded,'Heuristic rank '+y.ranking_score+' — NOT a probability',...y.warnings]));}catch(e){notify(e.message,true)}};card.append(hb);const b=elt('button','Suggest identity matches','action');b.onclick=async()=>{try{const res=await api('/observations/'+x.id+'/suggest-matches','POST');const dest=document.querySelector('#matches-list');dest.replaceChildren();dest.append(elt('p',res.warning,'warning'));res.candidates.forEach(y=>item(dest,[y.person_name_verbatim,'Rank '+y.ranking_score+' (NOT a probability)',y.explanation]));}catch(e){notify(e.message,true)}};card.append(b);});}
-async function loadGraph(groupId){
-const root=document.querySelector('#graph-comparison');root.replaceChildren();root.append(elt('h3','Competing relationship branches'));
-const data=await api('/hypotheses/'+encodeURIComponent(groupId)+'/graph');
-root.append(elt('p','Set revision '+data.version+' · unscored hypotheses · accepted tree unchanged','hint'));
-for(const o of data.options){
-  const card=elt('div',undefined,'item');
-  card.append(elt('strong',o.description+(o.is_unknown?' (other / unknown)':'')));
-  if(!o.revision){card.append(elt('div','No graph revision supplied'));root.append(card);continue;}
-  card.append(elt('div','Revision '+o.revision.revision_number+'; '+o.edges.length+' asserted relationships'));
-  for(const e of o.edges){card.append(elt('div',e.relationship_type+': '+e.from_observation_id+' → '+e.to_observation_id));}
-  for(const warning of o.revision.assessment.warnings){card.append(elt('p','Review: '+warning,'hint'));}
-  root.append(card);
+// WP-012/013: SVG is assembled through DOM APIs; source-record text is never parsed as HTML.
+function svgElement(tag,attributes={}){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  Object.entries(attributes).forEach(([key,value])=>e.setAttribute(key,String(value)));return e;}
+function drawBranch(diagram,target,zoom=100){target.replaceChildren();
+  const title=elt('h3',diagram.description+(diagram.is_unknown?' (other / unknown)':''));target.append(title);
+  target.append(elt('p',diagram.interpretation+' · Not a verified or accepted tree','hint'));
+  if(!diagram.nodes.length){target.append(elt('p','No family relationships asserted in this alternative. An unidentified relative remains possible.','warning'));return;}
+  const container=elt('div',undefined,'family-diagram');
+  const svg=svgElement('svg',{viewBox:'0 0 '+diagram.width+' '+diagram.height,role:'img',
+    'aria-label':'Diagram of '+diagram.nodes.length+' historical appearances and '+diagram.links.length+' proposed relationships'});
+  const positions=new Map(diagram.nodes.map(n=>[n.id,n]));
+  diagram.links.forEach(link=>{const from=positions.get(link.source_id),to=positions.get(link.target_id);if(!from||!to)return;
+    const path=svgElement('path',{d:'M '+(from.x+95)+' '+(from.y+66)+' L '+(to.x+95)+' '+(to.y+4),
+      stroke:link.has_contradiction?'#a63d32':'#42657b','stroke-width':'2',fill:'none',
+      'stroke-dasharray':link.style==='dashed'?'6 5':'none'});
+    path.append(svgElement('title')).textContent=link.relationship_type+(link.has_contradiction?' — contradictory evidence':'');svg.append(path);});
+  diagram.nodes.forEach(node=>{const box=svgElement('g');const rect=svgElement('rect',{
+    x:node.x,y:node.y,width:190,height:70,rx:7,fill:'#f5f9fb',stroke:'#486778','stroke-width':1.3});box.append(rect);
+    const name=svgElement('text',{x:node.x+8,y:node.y+22,'font-size':12,'font-weight':600,fill:'#173654'});
+    name.textContent=(node.label||'Unidentified').slice(0,26);box.append(name);
+    const detail=svgElement('text',{x:node.x+8,y:node.y+42,'font-size':11,fill:'#465866'});
+    detail.textContent=(node.event_type+' '+(node.date_as_written||'')).slice(0,29);box.append(detail);
+    const type=svgElement('text',{x:node.x+8,y:node.y+57,'font-size':10,fill:'#657982'});
+    type.textContent='Record appearance · not confirmed';box.append(type);
+    box.append(svgElement('title')).textContent=node.label+' — '+node.event_type+' '+node.date_as_written+' '+node.place_as_written;
+    svg.append(box);});
+  svg.style.width=String(zoom)+'%';svg.style.maxWidth='none';container.append(svg);target.append(container);
+  const details=elt('details');details.append(elt('summary','Relationship details ('+diagram.links.length+')'));
+  const list=elt('div',undefined,'family-chart-list');
+  diagram.links.forEach(link=>list.append(elt('div',link.relationship_type+' · '+(positions.get(link.source_id)?.label||link.source_id)+' → '+(positions.get(link.target_id)?.label||link.target_id))));
+  details.append(list);target.append(details);
+  if(diagram.edge_assessments.length){const warning=elt('p','Potential shared-original evidence groups do not establish independent corroboration.','warning');target.append(warning);
+    diagram.edge_assessments.forEach(edge=>target.append(elt('p',edge.edge_key+': '+edge.potential_original_group_count+' possible-original groups · '+
+      edge.distinct_declared_origin_groups+' legacy declared-origin groups · independence unverified','hint')));}
+  diagram.warnings.forEach(w=>target.append(elt('p','Review: '+w,'hint')));
 }
-root.append(elt('p','Structural comparison only. Original source groups may not be independent.','hint'));
+async function loadGraph(groupId){
+  const root=document.querySelector('#graph-comparison');root.replaceChildren();root.append(elt('h3','Interactive provisional family tree'));
+  const data=await api('/hypotheses/'+encodeURIComponent(groupId)+'/graph');
+  root.append(elt('p','Set revision '+data.version+' · all options unscored · accepted Gramps tree unchanged','warning'));
+  const options=data.options.map(x=>({key:x.option_key,label:x.description+(x.is_unknown?' (unidentified)':'')}));
+  const controls=elt('div',undefined,'grid');
+  function selector(label,id,initial){const panel=elt('div');const lbl=elt('label',label);lbl.setAttribute('for',id);panel.append(lbl);
+    const sel=elt('select');sel.id=id;options.forEach(o=>{const opt=elt('option',o.label);opt.value=o.key;sel.append(opt)});sel.value=initial;panel.append(sel);controls.append(panel);return sel;}
+  const left=selector('Family alternative A','chart-left',options[0]?.key);
+  const right=selector('Family alternative B','chart-right',options[1]?.key||options[0]?.key);
+  root.append(controls);
+  const line=elt('div',undefined,'row');const zoomLabel=elt('label','Diagram zoom');zoomLabel.setAttribute('for','family-zoom');
+  const zoom=elt('input');zoom.id='family-zoom';zoom.type='range';zoom.min='80';zoom.max='250';zoom.step='10';zoom.value='100';
+  zoom.style.width='200px';line.append(zoomLabel,zoom);
+  const go=elt('button','Compare selected alternatives','action');go.type='button';line.append(go);root.append(line);
+  const legend=elt('div',undefined,'family-legend');['Solid line: proposed parent link','Dashed: other proposed relationship','Red: recorded contradiction','All nodes: historical appearances'].forEach(x=>legend.append(elt('span',x)));
+  root.append(legend);
+  const views=elt('div',undefined,'family-branches');const a=elt('div',undefined,'branch-card'),b=elt('div',undefined,'branch-card');views.append(a,b);root.append(views);
+  const difference=elt('div',undefined,'panel');root.append(difference);
+  async function refresh(){try{
+    if(left.value===right.value){notify('Choose two different alternatives for comparison',true);return;}
+    const response=await api('/hypotheses/'+encodeURIComponent(groupId)+'/compare-view?left='+encodeURIComponent(left.value)+'&right='+encodeURIComponent(right.value));
+    drawBranch(response.left,a,Number(zoom.value));drawBranch(response.right,b,Number(zoom.value));
+    difference.replaceChildren(elt('h3','Structural differences'),elt('p','Shared proposed links: '+response.comparison.common.length+
+      ' · only A: '+response.comparison.only_left.length+' · only B: '+response.comparison.only_right.length));
+    difference.append(elt('p',response.comparison.warning,'hint'));
+    if(response.other_or_unknown_available)difference.append(elt('p','Other or unidentified relatives remain an explicit alternative.','hint'));
+  }catch(error){notify(error.message,true)}}
+  go.onclick=refresh;zoom.onchange=refresh;
+  if(options.length>=2)await refresh();else root.append(elt('p','At least two alternatives are required to compare.','hint'));
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'ID: '+x.id,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}

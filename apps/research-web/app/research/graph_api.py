@@ -16,6 +16,7 @@ from app.research.models import (HypothesisSet, HypothesisOption, Observation, S
                                   BranchRevision, BranchEdge, BranchReview)
 from app.research.graph_schemas import RevisionIn, BranchReviewIn
 from app.research.graph import canonical_edge, validate_topology, assessment, compare_options
+from app.research.source_families_api import classification
 
 DB = Annotated[Session, Depends(session)]
 router = APIRouter(prefix='/api/v1/research', tags=['Research graph (provisional)'],
@@ -60,7 +61,7 @@ def representation(db, revision):
     return {'id': str(revision.id), 'revision_number': revision.revision_number,
             'rationale': revision.rationale, 'created_by': revision.created_by,
             'created_at': revision.created_at.isoformat(), 'edges': result,
-            'assessment': assessment(edges, observations, docs),
+            'assessment': assessment(edges, observations, docs, classification(db, list(docs.values()))),
             'gramps_written': False}
 
 
