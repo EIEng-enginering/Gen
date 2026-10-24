@@ -10,6 +10,14 @@ services:
       GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
     depends_on:
       - grampsweb_redis
+    # The worker shares Gramps's SQLite user database. Wait until the web
+    # entrypoint has finished its migrations before starting another entrypoint.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
     volumes: &gramps_volumes
       - gramps_users:/app/users
       - gramps_index:/app/indexdir
@@ -25,10 +33,14 @@ services:
   grampsweb_celery:
     <<: *gramps_common
     ports: []
+    healthcheck:
+      disable: true
     command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
     depends_on:
-      - grampsweb
-      - grampsweb_redis
+      grampsweb:
+        condition: service_healthy
+      grampsweb_redis:
+        condition: service_started
 
   grampsweb_redis:
     image: ${VALKEY_IMAGE:-valkey/valkey:8-alpine}
