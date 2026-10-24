@@ -32,7 +32,7 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <nav aria-label="Research sections">
 <button class="active" data-tab="overview">Overview</button><button data-tab="documents">Historical documents</button>
 <button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button><button data-tab="evidence">Evidence comparison</button>
-<button data-tab="assistant">Guided research assistant</button><button data-tab="ops">Operations dashboard</button>
+<button data-tab="ai-research" class="action primary">AI Research</button><button data-tab="assistant">Offline guided assistant</button><button data-tab="ops">Operations dashboard</button>
 </nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
 <section id="documents" hidden><div class="panel"><h2>WP-010 — Original-source dependence</h2>
@@ -135,6 +135,14 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <label for="evidence-zoom">Preview zoom</label><input id="evidence-zoom" type="range" min="25" max="300" value="100" step="25">
 <div id="evidence-image-panel" class="family-diagram" style="max-height:550px" aria-live="polite"></div>
 </div></section>
+<section id="ai-research" hidden><div class="panel"><h2>24 Gen AI Research — local model and cited family-history research</h2>
+<p id="ai-status" class="warning" role="status">Checking local model settings. Provider website searches and Gramps writes are disabled.</p>
+<form id="ai-form"><label for="ai-question">Ask a genealogical question</label><textarea id="ai-question" name="question" required minlength="4" maxlength="1000" placeholder="Research Oldham families in Cheshire, 1750 to 1900. What does the available evidence show?"></textarea>
+<div class="grid"><label>Surname <input name="surname" maxlength="100" placeholder="Oldham"></label><label>County or historical place <input name="county" maxlength="100" placeholder="Cheshire"></label><label>From year <input name="from_year" type="number" min="1000" max="2100" placeholder="1750"></label><label>To year <input name="to_year" type="number" min="1000" max="2100" placeholder="1900"></label></div>
+<label>Research mode <select name="mode"><option value="guided">Guided — suggest and await manual actions</option><option value="conventional">Conventional — local search and cited summary</option><option value="autonomous">Autonomous planning — provider execution disabled</option></select></label>
+<label>Selected observation IDs (optional, up to six, comma separated) <input name="observation_ids" placeholder="Existing cited observation UUIDs"></label>
+<button type="submit" class="action primary" id="ai-ask">Research local cited evidence</button></form>
+<div id="ai-response" aria-live="polite"></div></div><div class="panel"><h3>Research history (stored locally)</h3><button id="ai-history-refresh" type="button" class="action">Refresh history</button><div id="ai-history" class="results"></div></div></section>
 <section id="assistant" hidden><div class="panel"><h2>WP-015 — Citation-grounded research guidance</h2>
 <p class="warning">The current assistant is an offline research guide, not a running language model. It does not search provider websites, run cloud AI or alter Gramps records.</p>
 <form id="assistant-form"><label>Research question<textarea name="question" required minlength="4" maxlength="1000" placeholder="Could these appearances be the same person?"></textarea></label>
@@ -232,7 +240,7 @@ async function loadGraph(groupId){
 }
 async function loadHypotheses(){const data=await api('/hypotheses');const root=document.querySelector('#hypothesis-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.title,x.relation_type,'State: '+x.status]);x.options.forEach(o=>card.append(elt('div',(o.is_unknown?'[Unidentified] ':'')+o.description+' | '+(o.calibrated_probability===null?'unscored':o.calibrated_probability))));const btn=elt('button','Compare proposed branches','action');btn.type='button';btn.addEventListener('click',()=>loadGraph(x.id).catch(e=>notify(e.message,true)));card.append(btn);});}
 async function loadJobs(){const data=await api('/jobs');const root=document.querySelector('#jobs-list');root.replaceChildren();data.forEach(x=>{const card=item(root,[x.objective,'ID: '+x.id,'Mode: '+x.mode+' | '+x.status,'Budget: $'+x.cost_limit_usd]);for(const action of ['pause','resume','cancel']){const b=elt('button',action,'action');b.onclick=async()=>{try{await api('/jobs/'+x.id+'/control','POST',{action});await loadJobs()}catch(e){notify(e.message,true)}};card.append(b);}});}
-const loaders={overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs,evidence:async()=>{},assistant:async()=>{},ops:loadOperations};
+const loaders={"ai-research":loadAIResearch,overview:loadSummary,documents:loadDocuments,observations:loadObservations,historical:loadHistorical,hypotheses:loadHypotheses,gramps:async()=>{},jobs:loadJobs,evidence:async()=>{},assistant:async()=>{},ops:loadOperations};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(c=>c.classList.toggle('active',c===b));document.querySelectorAll('main>section').forEach(s=>s.hidden=(s.id!==b.dataset.tab));try{await loaders[b.dataset.tab]()}catch(e){notify(e.message,true)}});
 document.querySelector('#dependence-check').onclick=async()=>{
   try{const ids=document.querySelector('#dependence-ids').value.split(',').map(x=>x.trim()).filter(Boolean);
@@ -382,6 +390,55 @@ document.querySelector('#ops-inspect').onclick=async()=>{try{
   const id=document.querySelector('#ops-job-id').value.trim();const data=await api('/ops/jobs/'+encodeURIComponent(id));
   document.querySelector('#ops-detail').textContent=JSON.stringify(data,null,2);
 }catch(e){notify(e.message,true)}};
+
+// Local-first AI research (actual inference only when a configured Ollama model succeeds).
+async function loadAIResearch(){
+  const c=await api('/ai/capabilities'); const target=document.querySelector('#ai-status');
+  target.textContent=c.local_model.available
+    ? ('Local Ollama model configured: '+c.local_model.model+'. Availability verified only when a cited answer succeeds. External provider searches disabled.')
+    : 'No local model configured. The app will provide a deterministic, cited research guide. No outside provider searches.';
+  await refreshAIHistory();
+}
+async function refreshAIHistory(){
+  const data=await api('/ai/history');const root=document.querySelector('#ai-history');root.replaceChildren();
+  if(!data.length)root.append(elt('p','No locally saved research questions yet.','hint'));
+  data.forEach(a=>{const card=item(root,[a.question,a.surname+' · '+a.county+' · '+a.execution+' · '+a.created_at]);
+    const b=elt('button','Read saved answer','action');b.type='button';b.onclick=async()=>{try{renderAIResult(await api('/ai/history/'+encodeURIComponent(a.id)))}catch(e){notify(e.message,true)}};
+    card.append(b);});
+}
+function renderAIResult(run){
+  const root=document.querySelector('#ai-response');root.replaceChildren();const a=run.answer;
+  root.append(elt('h3','Research result · '+(a.model_execution==='local_model'?'Local language model: '+a.model:'Cited offline fallback')),
+    elt('p',a.model_note,'warning'),elt('p','Source coverage is bounded; no online provider was queried. No identity is proven.','hint'),
+    elt('h3','Cited local observations'),elt('p',a.summary));
+  a.observed_facts.forEach(f=>{const d=elt('div',undefined,'item');d.append(elt('strong',f.record.name_verbatim+' — '+f.record.event_type),
+      elt('p',f.record.event_date_verbatim+' · '+f.record.place_verbatim),
+      elt('p',f.citation.provider+' · '+f.citation.reference),
+      elt('p','Observation '+f.observation_id+' · original document '+f.citation.document_id,'hint'));
+    const link=elt('button','Open cited evidence','action');link.type='button';link.onclick=()=>{
+      document.querySelector('#evidence-ids').value=f.observation_id;
+      document.querySelector('[data-tab="evidence"]').click();
+      document.querySelector('#evidence-compare').click();};d.append(link);root.append(d);});
+  if(!a.observed_facts.length)root.append(elt('p','No local records matched the selected bounded scope; this is not a verified no-result search.','warning'));
+  if(a.model_interpretation){root.append(elt('h3','Model interpretation (not proof)'),elt('p',a.model_interpretation));
+    a.model_uncertainties.forEach(x=>root.append(elt('p','Uncertainty: '+x,'hint')));}
+  root.append(elt('p','Possible original-source groups: '+a.source_dependence_groups.length+' (independence not verified).','warning'));
+  root.append(elt('h3','Suggested next actions'));
+  const actions=elt('ol');[...a.research_steps,...a.model_next_steps].forEach(x=>actions.append(elt('li',x)));root.append(actions);
+  root.append(elt('h3','Provider leads — manual only; not searched'));
+  a.manual_source_leads.forEach(p=>{const d=elt('p',p.provider+' · suggested search: '+p.query_hint+' · '+p.access);
+    const l=elt('a',' Open provider manually');l.href=p.url;l.target='_blank';l.rel='noopener noreferrer';d.append(l);root.append(d);});
+  root.append(elt('p',a.mode_explanation,'warning'));
+}
+document.querySelector('#ai-form').onsubmit=async e=>{e.preventDefault();const b=formFields(e.target);
+  b.observation_ids=(b.observation_ids||'').split(',').map(x=>x.trim()).filter(Boolean);
+  for(const k of ['from_year','to_year'])if(b[k]!==undefined)b[k]=Number(b[k]);
+  const btn=document.querySelector('#ai-ask');btn.disabled=true;
+  try{const result=await api('/ai/ask','POST',b);renderAIResult(result);await refreshAIHistory();notify('Research answer saved locally; accepted Gramps tree unchanged.');}
+  catch(err){notify(err.message,true)}finally{btn.disabled=false}
+};
+document.querySelector('#ai-history-refresh').onclick=()=>refreshAIHistory().catch(e=>notify(e.message,true));
+if(location.hash==='#ai-research')document.querySelector('[data-tab="ai-research"]').click();
 
 loadSummary().catch(e=>notify('Database not ready: '+e.message,true));
 </script></body></html>'''
