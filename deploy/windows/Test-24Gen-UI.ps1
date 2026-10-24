@@ -5,6 +5,13 @@ $ErrorActionPreference = 'Stop'
 $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $envFile = Join-Path $repo '.env'
 if (-not (Test-Path -LiteralPath $envFile)) { throw 'Private .env missing. Run Install-24Gen.ps1 first.' }
+$composeFile = Join-Path $repo 'deploy\compose.yaml'
+$runningServices = @(& docker compose --project-directory $repo --env-file $envFile -f $composeFile ps --status running --services | Where-Object { $_ })
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect 24 Gen Docker services.' }
+$requiredServices = @('grampsweb','grampsweb_celery','grampsweb_redis','research_db','research_web')
+$missingServices = @($requiredServices | Where-Object { $_ -notin $runningServices })
+if ($missingServices.Count -gt 0) { throw ('24 Gen services not running: ' + ($missingServices -join ', ')) }
+Write-Host 'PASS: all five Docker services running'
 $values = @{}
 foreach ($line in (Get-Content -LiteralPath $envFile -Encoding UTF8)) {
     if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') { $values[$matches[1]] = $matches[2] }
