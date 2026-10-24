@@ -53,7 +53,7 @@ def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {'service': '24 Gen Research', 'stage': 'WP-002–016 provisional research candidate (R0.1 unaccepted)',
             'research_database_connected': database_check(),
             'gramps_integration': 'optional_read_only_handle_preflight_not_live_verified',
-            'autonomous_search': 'not_implemented'}
+            'autonomous_search': 'local_planning_only_no_provider_executor'}
 
 
 @app.get('/api/v1/features')
@@ -65,12 +65,12 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
                         'offline_gramps_contract_review', 'non_executable_write_readiness',
                         'source_cited_historical_place_registry','english_census_aware_candidate_triage',
                         'source_cited_evidence_comparison', 'browser_local_image_preview_only',
-                        'deterministic_cited_guided_research_plans', 'read_only_operations_dashboard',
+                        'deterministic_cited_guided_research_plans', 'local_first_ai_research_with_cited_history', 'read_only_operations_dashboard',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
         'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage', 'full_population_record_linkage',
-                                    'external_LLM_execution', 'handwriting_OCR_engine', 'calibrated_probability_graph',
+                                    'optional_cloud_LLM_execution', 'handwriting_OCR_engine', 'calibrated_probability_graph',
                                     'autonomous_jobs', 'Gramps_API_write_adapter'],
     }
 
@@ -100,8 +100,8 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     families, events and citations. Set up the Gramps owner account before import.</p>
     <p><a href="{url}" target="_blank" rel="noopener noreferrer">Open Gramps Web</a></p></article>
     <article><h2>Research system status</h2><p>Authentication and research database
-    infrastructure are available; probabilistic matching and AI features are planned, <strong>not yet implemented</strong>. A cited deterministic local research guide and evidence comparison are available without AI model execution.</p>
-    <p><a href="/workspace">Open evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
+    infrastructure are available; Further probabilistic matching and AI features are planned, while a local-first AI Research panel is available: it runs a configured local Ollama model when reachable and returns a cited offline guide otherwise. No provider searches or accepted-tree writes are enabled.</p>
+    <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>
     <p>Do not store real genealogy data until the live backup and restore gates pass.
@@ -154,3 +154,7 @@ from app.research.dashboard_api import router as dashboard_router
 app.include_router(evidence_router)
 app.include_router(assistant_router)
 app.include_router(dashboard_router)
+
+# Local-first AI Research, strictly citation-checked and no Gramps write tools.
+from app.research.ai_research_api import router as ai_research_router
+app.include_router(ai_research_router)

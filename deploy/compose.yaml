@@ -75,6 +75,10 @@ services:
       GEN_DB_USER: gen24
       GEN_DB_PASSWORD: ${GEN_DB_PASSWORD:?Set GEN_DB_PASSWORD in .env}
       GRAMPS_PUBLIC_URL: http://127.0.0.1:${GRAMPS_PORT:-5055}
+      # Local Ollama is OPTIONAL. User must install and choose a model explicitly.
+      # No automatic downloads or cloud data transmission.
+      GEN_LOCAL_AI_MODEL: ${GEN_LOCAL_AI_MODEL:-}
+      GEN_LOCAL_AI_URL: http://host.docker.internal:11434
     depends_on:
       research_db:
         condition: service_healthy

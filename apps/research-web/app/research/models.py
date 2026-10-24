@@ -377,3 +377,20 @@ class SourceProviderPolicy(Base):
         CheckConstraint("access_mode IN ('manual_only','approved_api','licensed_local_dataset')",name='ck_provider_access_mode'),
         CheckConstraint('requests_per_day >= 0 AND cooldown_seconds >= 0 AND daily_budget_cents >= 0',name='ck_provider_policy_limits'),
     )
+
+class AIResearchRun(Base):
+    """Local append-only research answer history; no approved Gramps mutations."""
+    __tablename__ = 'ai_research_runs'
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid)
+    created_by = Column(String(120), nullable=False)
+    question = Column(Text, nullable=False)
+    mode = Column(String(20), nullable=False)
+    surname = Column(String(160), nullable=False, default='')
+    county = Column(String(160), nullable=False, default='')
+    scope_json = Column(JSON, nullable=False, default=dict)
+    answer_json = Column(JSON, nullable=False)
+    execution_status = Column(String(50), nullable=False)
+    model_name = Column(String(120))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    __table_args__ = (CheckConstraint("mode IN ('guided','conventional','autonomous')",name='ck_ai_run_mode'),
+                      Index('ix_ai_runs_created', 'created_at'),)
