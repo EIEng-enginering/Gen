@@ -125,7 +125,8 @@ def search(db:Session,*,surname:str='',given:str='',county_filter:str='',year_fr
     distinct=len({r.possible_original for r in rows if r.possible_original})
     return {'results':formatted,'next_cursor':str(rows[-1].id) if has_more and rows else None,
         'result_cap':limit,'page_has_more':has_more,'exhaustive':False,
-        'scope':{'surname':surname,'county':county_filter,'year_from':year_from,'year_to':year_to,
+        'scope':{'surname':surname,'given_for_comparison_only':given,'given_filter_applied':False,
+                 'county':county_filter,'year_from':year_from,'year_to':year_to,
                  'record_type':record_type,'provider':provider},
         'origin_labelled_groups_on_page':distinct,'origin_independence_verified':False,
         'calibrated_probability':None,'external_provider_requests':0,

@@ -20,7 +20,7 @@ small,.muted{color:#476077}.warning{background:#fff7e5;border-left:4px solid #ba
 </style></head><body><header><h1>24 Gen — General Historical Record Search</h1><p>Local, source-aware research • unverified records remain leads • Gramps is read-only</p></header>
 <main><article><p><a href="/workspace">Back to Research Workspace</a> · <a href="/acquisition">Evidence intake</a> · <a href="/">Home</a></p>
 <form id="search"><label>Surname / variants separated by |<input name="surname" minlength="2" maxlength="120" placeholder="Smith | Smyth"></label>
-<label>Given names (optional)<input name="given" maxlength="120" placeholder="Elizabeth"></label>
+<label>Given names to compare (does not filter results)<input name="given" maxlength="120" placeholder="Elizabeth"></label>
 <label>Historical county (optional)<input name="county" maxlength="100" placeholder="Cheshire"></label>
 <label>Year from<input name="year_from" type="number" min="1500" max="2026"></label>
 <label>Year to<input name="year_to" type="number" min="1500" max="2026"></label>

@@ -30,6 +30,7 @@ def test_unauthenticated_denied_and_no_external_calls(client):
     r=c.get('/general-search',headers=AUTH)
     assert r.status_code==200
     assert 'textContent' in r.text and 'General Historical Record Search' in r.text
+    assert 'Given names to compare (does not filter results)' in r.text
     assert c.get(ROOT+'/coverage').status_code==401
     r=c.get(ROOT+'/coverage',headers=AUTH)
     assert r.status_code==200 and r.json()['providers_executed']==0
