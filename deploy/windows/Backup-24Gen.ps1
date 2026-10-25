@@ -69,6 +69,31 @@ try {
     $backupDir = Join-Path $backupRootFull "gen24-cold-$timestamp"
     if (Test-Path -LiteralPath $backupDir) { throw "Backup directory already exists: $backupDir" }
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+    # Restrict the directory before writing an incomplete marker or private archives.
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+    $allowedSids = @(
+        $identity,
+        [System.Security.Principal.SecurityIdentifier]::new('S-1-5-32-544'), # Administrators
+        [System.Security.Principal.SecurityIdentifier]::new('S-1-5-18')      # SYSTEM
+    )
+    $acl = Get-Acl -LiteralPath $backupDir
+    $acl.SetAccessRuleProtection($true, $false)
+    foreach ($sid in $allowedSids) {
+        $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $sid, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow'
+        )
+        $acl.AddAccessRule($rule)
+    }
+    Set-Acl -LiteralPath $backupDir -AclObject $acl
+    $verifiedAcl = Get-Acl -LiteralPath $backupDir
+    if (-not $verifiedAcl.AreAccessRulesProtected) { throw 'Backup directory ACL still inherits permissions.' }
+    $permitted = @($allowedSids | ForEach-Object { $_.Value })
+    foreach ($entry in $verifiedAcl.Access) {
+        $sid = $entry.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+        if ($entry.AccessControlType -ne 'Allow' -or $sid -notin $permitted) {
+            throw 'Backup directory ACL grants access outside the restricted principals.'
+        }
+    }
     Set-Content -LiteralPath (Join-Path $backupDir 'INCOMPLETE.txt') -Value 'Backup has not completed or been restored.' -Encoding utf8
 
     $stopAttempted = $true

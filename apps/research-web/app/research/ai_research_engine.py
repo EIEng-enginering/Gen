@@ -16,6 +16,7 @@ from app.research.models import Observation, SourceDocument
 from app.research.evidence_comparison import dossiers
 from app.research.research_assistant import assist
 from app.research.source_families_api import classification
+from app.research.gramps_context import cited_event_packets
 
 ALLOWED_LOCAL_HOSTS={'127.0.0.1','localhost','host.docker.internal','ollama'}
 MAX_RESPONSE_BYTES=65536
@@ -131,7 +132,7 @@ def validate_model_answer(reply,packets):
 def manual_leads(surname,county):
     # No network operations. External links are fixed, never from model-generated URLs.
     base=f'{surname} {county}'.strip()
-    return [
+    leads=[
         {'class':'civil_bmd','provider':'FreeBMD','access':'manual_only','url':'https://www.freebmd.org.uk/',
          'query_hint':base,'status':'not_searched'},
         {'class':'parish','provider':'FreeREG','access':'manual_only','url':'https://www.freereg.org.uk/',
@@ -141,17 +142,30 @@ def manual_leads(surname,county):
         {'class':'archive','provider':'The National Archives Discovery','access':'manual_only','url':'https://discovery.nationalarchives.gov.uk/',
          'query_hint':base,'status':'not_searched'},
     ]
+    if 'cheshire' in county.casefold():
+        leads.extend([
+            {'class':'civil_bmd','provider':'Cheshire BMD','access':'manual_only',
+             'url':'https://www.cheshirebmd.org.uk/', 'query_hint':base,'status':'not_searched'},
+            {'class':'archive','provider':'Cheshire Archives and Local Studies',
+             'access':'manual_only',
+             'url':'https://www.cheshirearchives.org.uk/what-we-hold/what-we-hold.aspx',
+             'query_hint':base,'status':'not_searched'},
+        ])
+    return leads
 
-def answer(db,question,mode,surname,county,from_year,to_year,selected):
+def answer(db,question,mode,surname,county,from_year,to_year,selected,gramps_context=None):
     records=retrieve(db,surname,county,from_year,to_year,selected)
     ids=[UUID(r['observation_id']) for r in records]
     fallback=assist(db,question,mode,ids)
     docs=[db.get(SourceDocument,UUID(r['citation']['document_id'])) for r in records]
     dependence=classification(db,[d for d in docs if d is not None]) if docs else []
     packets=evidence_packets(records)
+    if gramps_context:
+        packets.extend(cited_event_packets(gramps_context))
     selected_citations=fallback['citations']
     outcome={'model_execution':'deterministic_fallback','model':None,'model_note':'No local model run was completed',
              'model_interpretation':None,'model_cited_observation_ids':[],
+             'model_cited_tree_evidence_ids':[],
              'model_uncertainties':[],'model_next_steps':[],
              'observed_facts':[{'observation_id':r['observation_id'],'citation':r['citation'],
                                'record':r['record']} for r in records],
@@ -161,16 +175,22 @@ def answer(db,question,mode,surname,county,from_year,to_year,selected):
              'research_steps':fallback['research_steps'],
              'mode_explanation':fallback['mode_explanation'],
              'manual_source_leads':manual_leads(surname,county),
+             'gramps_context':gramps_context,
+             'gramps_context_note':('Selected Guest-visible tree entries are context, not proof. '
+                                    'Only events with a source citation may enter the model prompt; '
+                                    'source originality remains unverified.' if gramps_context else None),
              'selection_is_exhaustive':False,'online_sources_searched':[],
              'calibrated_probability':None,'accepted_tree_mutation_enabled':False,
              'external_provider_execution_enabled':False,'model_output_is_verified_proof':False}
     if packets and configured_model():
         try:
             valid=validate_model_answer(_request_model(packets,question,mode),packets)
+            checked=valid['cited_observation_ids']
             outcome.update({'model_execution':'local_model','model':configured_model(),
                             'model_note':'Local-model interpretation is a hypothesis, not independently verified historical fact.',
                             'model_interpretation':valid['interpretation'],
-                            'model_cited_observation_ids':valid['cited_observation_ids'],
+                            'model_cited_observation_ids':[i for i in checked if not i.startswith('gramps:event:')],
+                            'model_cited_tree_evidence_ids':[i for i in checked if i.startswith('gramps:event:')],
                             'model_uncertainties':valid['uncertainties'],
                             'model_next_steps':valid['next_steps']})
         except (ModelUnavailable,ModelResponseRejected):
