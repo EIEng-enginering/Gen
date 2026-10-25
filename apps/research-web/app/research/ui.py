@@ -33,7 +33,7 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 <button class="active" data-tab="overview">Overview</button><button data-tab="documents">Historical documents</button>
 <button data-tab="observations">Person appearances</button><button data-tab="historical">Historical places</button><button data-tab="hypotheses">Family hypotheses</button><button data-tab="gramps">Gramps review (dry-run)</button><button data-tab="jobs">Research tasks</button><button data-tab="evidence">Evidence comparison</button>
 <button data-tab="ai-research" class="action primary">AI Research</button><button data-tab="assistant">Offline guided assistant</button><button data-tab="ops">Operations dashboard</button>
-</nav><main><div id="message" role="status" aria-live="polite"></div>
+<a class="action" href="/acquisition">Acquire records / AI prompts</a></nav><main><div id="message" role="status" aria-live="polite"></div>
 <section id="overview"><div class="panel"><h2>Research summary</h2><div id="summary" class="grid"></div><p class="hint">Accepted people and relationships remain in Gramps Web. All records and hypotheses here are provisional; no Gramps writes are implemented.</p><a href="/" rel="noopener">Return to foundation</a></div></section>
 <section id="documents" hidden><div class="panel"><h2>WP-010 — Original-source dependence</h2>
 <p class="warning">Two websites reproducing one original register are not independent corroborating evidence. These checks never merge documents or identities.</p>

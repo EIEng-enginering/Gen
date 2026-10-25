@@ -102,7 +102,7 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     <p><a href="{url}" target="_blank" rel="noopener noreferrer">Open Gramps Web</a></p></article>
     <article><h2>Research system status</h2><p>Authentication and research database
     infrastructure are available; further probabilistic matching and AI features are planned. The local-first AI Research panel can show a selected, Guest-visible Gramps person and use only source-cited events as model evidence. Uncited tree entries remain context, and no provider searches or accepted-tree writes are enabled.</p>
-    <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
+    <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/acquisition">Acquire historical evidence</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>
     <p>Do not store real genealogy data until the live backup and restore gates pass.
@@ -159,3 +159,9 @@ app.include_router(dashboard_router)
 # Local-first AI Research, strictly citation-checked and no Gramps write tools.
 from app.research.ai_research_api import router as ai_research_router
 app.include_router(ai_research_router)
+
+# WP-026: restricted evidence ingestion and model-independent source prompts.
+from app.research.acquisition_api import router as acquisition_router
+from app.research.acquisition_ui import router as acquisition_ui_router
+app.include_router(acquisition_router)
+app.include_router(acquisition_ui_router)

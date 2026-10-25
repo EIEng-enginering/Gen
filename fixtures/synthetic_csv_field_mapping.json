@@ -1,0 +1,23 @@
+{
+  "columns": {
+    "provider_record_id": "source_id",
+    "person_name_verbatim": "display_name",
+    "surname_verbatim": "surname",
+    "event_date_verbatim": "year",
+    "location_verbatim": "place",
+    "source_reference": "original_reference"
+  },
+  "defaults": {
+    "provider": "user_archive",
+    "source_title": "Synthetic non-historical parish fixture",
+    "record_type": "baptism",
+    "access_method": "user_import",
+    "licence": "synthetic_fixture",
+    "rights_note": "Invented test records only, no actual historical data",
+    "origin_group": "synthetic-test-parish-register",
+    "extraction_status": "unverified_extraction",
+    "source_viewed": false,
+    "collector": "fixture",
+    "record_entry_key": "entry-1"
+  }
+}
