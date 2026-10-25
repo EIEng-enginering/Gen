@@ -50,7 +50,7 @@ def health() -> dict:
 
 @app.get('/api/v1/status')
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
-    return {'service': '24 Gen Research', 'stage': 'WP-002–016 provisional research candidate (R0.1 unaccepted)',
+    return {'service': '24 Gen Research', 'stage': 'WP-028 provisional local search candidate (R0.1 unaccepted)',
             'research_database_connected': database_check(),
             'gramps_integration': 'guest_read_only_selected_person_context',
             'autonomous_search': 'local_planning_only_no_provider_executor'}
@@ -67,12 +67,15 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
                         'source_cited_evidence_comparison', 'browser_local_image_preview_only',
                         'deterministic_cited_guided_research_plans', 'local_first_ai_research_with_cited_history',
                         'guest_read_only_gramps_person_context', 'read_only_operations_dashboard',
+                        'bounded_local_general_search', 'source_aware_search_index',
+                        'uncalibrated_search_correlations', 'provider_execution_denial',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
         'planned_not_implemented': ['automated_research_ingestion', 'calibrated_record_linkage', 'record_linkage', 'full_population_record_linkage',
                                     'optional_cloud_LLM_execution', 'handwriting_OCR_engine', 'calibrated_probability_graph',
-                                    'autonomous_jobs', 'Gramps_API_write_adapter'],
+                                    'autonomous_jobs', 'Gramps_API_write_adapter',
+                                    'unified_gramps_and_record_search', 'authorised_provider_connectors'],
     }
 
 
@@ -102,13 +105,13 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     <p><a href="{url}" target="_blank" rel="noopener noreferrer">Open Gramps Web</a></p></article>
     <article><h2>Research system status</h2><p>Authentication and research database
     infrastructure are available; further probabilistic matching and AI features are planned. The local-first AI Research panel can show a selected, Guest-visible Gramps person and use only source-cited events as model evidence. Uncited tree entries remain context, and no provider searches or accepted-tree writes are enabled.</p>
-    <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/acquisition">Acquire historical evidence</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
+    <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/general-search">General record search</a> · <a href="/acquisition">Acquire historical evidence</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>
     <p>Do not store real genealogy data until the live backup and restore gates pass.
     The provisional evidence schema and manual record import are present. The
     Gramps write adapter and autonomous research are not implemented. This page does not change the accepted tree.</p></article>
-    <p class="label">WP-002–016: provisional research candidate · loopback deployment only</p></main></body></html>"""
+    <p class="label">WP-028: provisional local search candidate · loopback deployment only</p></main></body></html>"""
     return HTMLResponse(content=content)
 
 # WP-002 onwards: a separate *provisional* evidence research data plane.
@@ -165,3 +168,10 @@ from app.research.acquisition_api import router as acquisition_router
 from app.research.acquisition_ui import router as acquisition_ui_router
 app.include_router(acquisition_router)
 app.include_router(acquisition_ui_router)
+
+# WP028: indexed local historical search and unscored candidate correlations.
+# No external provider queries or accepted Gramps tree writes.
+from app.research.general_search_api import router as general_search_router
+from app.research.general_search_ui import router as general_search_ui_router
+app.include_router(general_search_router)
+app.include_router(general_search_ui_router)
