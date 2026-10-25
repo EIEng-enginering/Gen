@@ -137,10 +137,18 @@ section[hidden]{display:none!important}button:focus,input:focus,select:focus,tex
 </div></section>
 <section id="ai-research" hidden><div class="panel"><h2>24 Gen AI Research — local model and cited family-history research</h2>
 <p id="ai-status" class="warning" role="status">Checking local model settings. Provider website searches and Gramps writes are disabled.</p>
+<div class="panel"><h3>Select a person from your Gramps tree (read only)</h3>
+<p class="hint">Searches Guest-visible, non-private people. Tree entries without source citations are shown as context; they are not passed to the model as evidence.</p>
+<label for="ai-gramps-search">Name or surname</label><input id="ai-gramps-search" maxlength="80" placeholder="Oldham">
+<button type="button" id="ai-gramps-search-button" class="action">Find people</button>
+<button type="button" id="ai-gramps-clear" class="action">Clear selected person</button>
+<div id="ai-gramps-results" class="results" aria-live="polite"></div>
+<p id="ai-gramps-selected" class="hint">No person selected.</p></div>
 <form id="ai-form"><label for="ai-question">Ask a genealogical question</label><textarea id="ai-question" name="question" required minlength="4" maxlength="1000" placeholder="Research Oldham families in Cheshire, 1750 to 1900. What does the available evidence show?"></textarea>
 <div class="grid"><label>Surname <input name="surname" maxlength="100" placeholder="Oldham"></label><label>County or historical place <input name="county" maxlength="100" placeholder="Cheshire"></label><label>From year <input name="from_year" type="number" min="1000" max="2100" placeholder="1750"></label><label>To year <input name="to_year" type="number" min="1000" max="2100" placeholder="1900"></label></div>
 <label>Research mode <select name="mode"><option value="guided">Guided — suggest and await manual actions</option><option value="conventional">Conventional — local search and cited summary</option><option value="autonomous">Autonomous planning — provider execution disabled</option></select></label>
 <label>Selected observation IDs (optional, up to six, comma separated) <input name="observation_ids" placeholder="Existing cited observation UUIDs"></label>
+<input id="ai-gramps-handle" name="gramps_person_handle" type="hidden">
 <button type="submit" class="action primary" id="ai-ask">Research local cited evidence</button></form>
 <div id="ai-response" aria-live="polite"></div></div><div class="panel"><h3>Research history (stored locally)</h3><button id="ai-history-refresh" type="button" class="action">Refresh history</button><div id="ai-history" class="results"></div></div></section>
 <section id="assistant" hidden><div class="panel"><h2>WP-015 — Citation-grounded research guidance</h2>
@@ -394,11 +402,50 @@ document.querySelector('#ops-inspect').onclick=async()=>{try{
 // Local-first AI research (actual inference only when a configured Ollama model succeeds).
 async function loadAIResearch(){
   const c=await api('/ai/capabilities'); const target=document.querySelector('#ai-status');
-  target.textContent=c.local_model.available
+  const modelText=c.local_model.available
     ? ('Local Ollama model configured: '+c.local_model.model+'. Availability verified only when a cited answer succeeds. External provider searches disabled.')
     : 'No local model configured. The app will provide a deterministic, cited research guide. No outside provider searches.';
+  target.textContent=modelText+' Gramps Guest context: '+(c.gramps_guest_context.configured?'configured; check a selected person to verify access.':'not configured.');
   await refreshAIHistory();
 }
+function renderGrampsContext(context,root,citedIds=[]){
+  if(!context)return;
+  root.append(elt('h3','Selected Gramps person · read-only tree context'),
+    elt('p',context.person.name+' · '+context.person.gramps_id),
+    elt('p',context.event_citation_count+' event source citations in this bounded view; original-source independence unverified.','warning'));
+  const names=new Map(context.related_people.map(p=>[p.handle,p.name+' · '+p.gramps_id]));
+  names.set(context.person.handle,context.person.name+' · '+context.person.gramps_id);
+  context.events.forEach(e=>{const d=item(root,[e.type+' · '+e.date+' · '+e.place,e.description||'No event description',
+    e.citations.length?'Tree citations: '+e.citations.length:'No source citation on this tree event']);
+    e.citations.forEach(c=>{const id='gramps:event:'+e.handle+':citation:'+c.handle;
+      d.append(elt('p',(citedIds.includes(id)?'Model cited · ':'Tree citation · ')+c.source_title+' · '+c.page,'hint'));});});
+  if(!context.events.length)root.append(elt('p','No Guest-visible events in the bounded view.','hint'));
+  context.families.forEach(f=>item(root,['Family '+f.gramps_id,
+    'Father: '+(names.get(f.father_handle)||'not visible or selected person'),
+    'Mother: '+(names.get(f.mother_handle)||'not visible or selected person'),
+    'Children shown: '+f.child_handles.map(h=>names.get(h)||'not visible or selected person').join('; ')]));
+  if(context.events_truncated||context.families_truncated||context.related_people_truncated)
+    root.append(elt('p','Some tree links exceed this bounded preview; open Gramps Web for the full record.','warning'));
+}
+document.querySelector('#ai-gramps-search-button').onclick=async()=>{try{
+  const q=document.querySelector('#ai-gramps-search').value.trim();
+  const data=await api('/ai/gramps/search?q='+encodeURIComponent(q));
+  const root=document.querySelector('#ai-gramps-results');root.replaceChildren();
+  data.results.forEach(p=>{const card=item(root,[p.name,p.gramps_id]);
+    const b=elt('button','Select this person','action');b.type='button';b.onclick=async()=>{try{
+      const context=await api('/ai/gramps/people/'+encodeURIComponent(p.handle));
+      document.querySelector('#ai-gramps-handle').value=p.handle;
+      document.querySelector('#ai-gramps-selected').textContent='Selected: '+p.name+' · '+p.gramps_id;
+      const preview=document.querySelector('#ai-response');preview.replaceChildren();renderGrampsContext(context,preview);
+    }catch(err){notify(err.message,true)}};card.append(b);});
+  if(!data.results.length)root.append(elt('p','No Guest-visible people in this bounded search.','hint'));
+  root.append(elt('p','Showing at most '+data.limit+' results; this is not an exhaustive search.','hint'));
+}catch(err){notify(err.message,true)}};
+document.querySelector('#ai-gramps-clear').onclick=()=>{
+  document.querySelector('#ai-gramps-handle').value='';
+  document.querySelector('#ai-gramps-selected').textContent='No person selected.';
+  document.querySelector('#ai-gramps-results').replaceChildren();
+};
 async function refreshAIHistory(){
   const data=await api('/ai/history');const root=document.querySelector('#ai-history');root.replaceChildren();
   if(!data.length)root.append(elt('p','No locally saved research questions yet.','hint'));
@@ -419,9 +466,12 @@ function renderAIResult(run){
       document.querySelector('#evidence-ids').value=f.observation_id;
       document.querySelector('[data-tab="evidence"]').click();
       document.querySelector('#evidence-compare').click();};d.append(link);root.append(d);});
-  if(!a.observed_facts.length)root.append(elt('p','No local records matched the selected bounded scope; this is not a verified no-result search.','warning'));
+  if(!a.observed_facts.length)root.append(elt('p','No separate research-database observations matched; this is not a verified no-result search.','warning'));
+  if(a.gramps_context_note)root.append(elt('p',a.gramps_context_note,'warning'));
+  renderGrampsContext(a.gramps_context,root,a.model_cited_tree_evidence_ids||[]);
   if(a.model_interpretation){root.append(elt('h3','Model interpretation (not proof)'),elt('p',a.model_interpretation));
     a.model_uncertainties.forEach(x=>root.append(elt('p','Uncertainty: '+x,'hint')));}
+  if(a.model_cited_tree_evidence_ids?.length)root.append(elt('p','Model cited '+a.model_cited_tree_evidence_ids.length+' source-linked Gramps event(s); the originals still need review.','warning'));
   root.append(elt('p','Possible original-source groups: '+a.source_dependence_groups.length+' (independence not verified).','warning'));
   root.append(elt('h3','Suggested next actions'));
   const actions=elt('ol');[...a.research_steps,...a.model_next_steps].forEach(x=>actions.append(elt('li',x)));root.append(actions);

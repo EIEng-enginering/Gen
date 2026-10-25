@@ -52,7 +52,7 @@ def health() -> dict:
 def status_page(_: Annotated[str, Depends(authenticate)]) -> dict:
     return {'service': '24 Gen Research', 'stage': 'WP-002–016 provisional research candidate (R0.1 unaccepted)',
             'research_database_connected': database_check(),
-            'gramps_integration': 'optional_read_only_handle_preflight_not_live_verified',
+            'gramps_integration': 'guest_read_only_selected_person_context',
             'autonomous_search': 'local_planning_only_no_provider_executor'}
 
 
@@ -65,7 +65,8 @@ def feature_page(_: Annotated[str, Depends(authenticate)]) -> dict:
                         'offline_gramps_contract_review', 'non_executable_write_readiness',
                         'source_cited_historical_place_registry','english_census_aware_candidate_triage',
                         'source_cited_evidence_comparison', 'browser_local_image_preview_only',
-                        'deterministic_cited_guided_research_plans', 'local_first_ai_research_with_cited_history', 'read_only_operations_dashboard',
+                        'deterministic_cited_guided_research_plans', 'local_first_ai_research_with_cited_history',
+                        'guest_read_only_gramps_person_context', 'read_only_operations_dashboard',
                         'health_endpoint', 'research_database_connectivity_check'],
         'provided_by_gramps_web': ['family_tree_UI', 'Gramps_import_and_export',
                                     'person_and_event_management'],
@@ -100,7 +101,7 @@ def home(_: Annotated[str, Depends(authenticate)]) -> HTMLResponse:
     families, events and citations. Set up the Gramps owner account before import.</p>
     <p><a href="{url}" target="_blank" rel="noopener noreferrer">Open Gramps Web</a></p></article>
     <article><h2>Research system status</h2><p>Authentication and research database
-    infrastructure are available; Further probabilistic matching and AI features are planned, while a local-first AI Research panel is available: it runs a configured local Ollama model when reachable and returns a cited offline guide otherwise. No provider searches or accepted-tree writes are enabled.</p>
+    infrastructure are available; further probabilistic matching and AI features are planned. The local-first AI Research panel can show a selected, Guest-visible Gramps person and use only source-cited events as model evidence. Uncited tree entries remain context, and no provider searches or accepted-tree writes are enabled.</p>
     <p><a href="/workspace#ai-research">Open 24 Gen AI Research</a> · <a href="/workspace">Evidence research workspace</a></p><p><a href="/api/v1/status">View status JSON</a> ·
     <a href="/api/v1/features">View feature status JSON</a></p></article>
     <article class="notice"><h2>Important data controls</h2>

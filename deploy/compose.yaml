@@ -79,6 +79,10 @@ services:
       # No automatic downloads or cloud data transmission.
       GEN_LOCAL_AI_MODEL: ${GEN_LOCAL_AI_MODEL:-}
       GEN_LOCAL_AI_URL: http://host.docker.internal:11434
+      # Dedicated Gramps Guest account: read non-private objects; never use owner credentials.
+      GEN_GRAMPS_READ_USER: ${GEN_GRAMPS_READ_USER:-}
+      GEN_GRAMPS_READ_PASSWORD: ${GEN_GRAMPS_READ_PASSWORD:-}
+      GEN_GRAMPS_API_URL: http://grampsweb:5000/api
     depends_on:
       research_db:
         condition: service_healthy
